@@ -932,6 +932,13 @@ select { background: var(--white); cursor: pointer; }
   <div id="topbar">
     <h2 id="page-title">Dashboard</h2>
     <div class="topbar-right">
+      <div id="global-search-wrap" style="position:relative">
+        <input id="global-search" type="text" placeholder="🔍 Buscar paciente…"
+          style="width:180px;padding:6px 12px;border-radius:20px;border:1px solid rgba(198,198,205,0.4);background:var(--surface-container-low);font-size:13px;outline:none;transition:width .2s"
+          onfocus="this.style.width='220px'" onblur="this.style.width='180px'"
+          oninput="globalSearch(this.value)">
+        <div id="global-search-drop" style="display:none;position:absolute;top:calc(100% + 6px);right:0;width:280px;background:var(--white);border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,0.14);border:1px solid var(--outline-variant);z-index:200;max-height:300px;overflow-y:auto"></div>
+      </div>
       <div id="sync-status" class="sync-pill sync-none" onclick="_autoPullOnOpen(true)" title="Click para actualizar datos desde la nube">
         <span class="sync-icon">☁️</span>
         <span class="sync-text">Configurar sync</span>
@@ -1162,8 +1169,42 @@ function renderDashboard(el) {
       </div>
     </div>
 
+    <!-- ALERTAS DINÁMICAS -->
+    ${(() => {
+      const alerts = [];
+      // Deuda total
+      let totalDeuda = 0;
+      db.forEach(p => (p.historial_consultas||[]).forEach(c => { totalDeuda += getConsultaPayment(c).monto_pendiente||0; }));
+      if (totalDeuda > 0) {
+        const deudores = db.filter(p => { let d=0; (p.historial_consultas||[]).forEach(c=>{d+=getConsultaPayment(c).monto_pendiente||0;}); return d>0; }).length;
+        alerts.push(`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="navigate('finanzas')">
+          <span style="font-size:20px">💰</span>
+          <div style="flex:1"><strong style="color:#b91c1c">Deuda pendiente: $${totalDeuda.toLocaleString('es-AR')}</strong><span style="font-size:12px;color:#b91c1c"> · ${deudores} paciente${deudores>1?'s':''}</span></div>
+          <span style="font-size:12px;color:#b91c1c;font-weight:600">Ver →</span>
+        </div>`);
+      }
+      // Viales por vencer
+      const vialesAlert = getVialesAlerta();
+      if (vialesAlert.length) {
+        const names = vialesAlert.map(v=>v.peptido).join(', ');
+        alerts.push(`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="navigate('proveedor')">
+          <span style="font-size:20px">⚠️</span>
+          <div style="flex:1"><strong style="color:#92400e">${vialesAlert.length} vial${vialesAlert.length>1?'es':''} próximo${vialesAlert.length>1?'s':''} a vencer:</strong><span style="font-size:12px;color:#92400e"> ${esc(names)}</span></div>
+          <span style="font-size:12px;color:#92400e;font-weight:600">Ver →</span>
+        </div>`);
+      }
+      return alerts.length ? `<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">${alerts.join('')}</div>` : '';
+    })()}
+
     <!-- PANELES -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="card">
+        <div class="card-title" style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💉</span>
+          Esta Semana
+        </div>
+        ${renderEstaSemana(db)}
+      </div>
       <div class="card">
         <div class="card-title" style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:16px;display:flex;align-items:center;gap:8px">
           <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#fef3c7,#fde68a);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📅</span>
@@ -1171,14 +1212,50 @@ function renderDashboard(el) {
         </div>
         ${renderProximasConsultas(db, hoy)}
       </div>
-      <div class="card">
-        <div class="card-title" style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">👤</span>
-          Últimos Pacientes
-        </div>
-        ${renderUltimosPacientes(db)}
-      </div>
     </div>`;
+}
+
+// ─── Esta Semana: pacientes con inyección pendiente ───
+function renderEstaSemana(db) {
+  const hoy = new Date();
+  const due = [];
+  db.forEach(p => {
+    const prots = (p.protocolo_peptidos||[]).filter(x => x.activo);
+    if (!prots.length) return;
+    const cons = [...(p.historial_consultas||[])].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+    const lastFecha = cons.length ? cons[0].fecha : null;
+    const nombre = `${p.datos_personales.nombre||''} ${p.datos_personales.apellido||''}`.trim();
+    if (!lastFecha) { due.push({ id:p.id, nombre, dueInDays:-999, label:'Sin consultas', dot:'#7c3aed' }); return; }
+    const days = Math.floor((hoy - new Date(lastFecha+'T12:00:00')) / 86400000);
+    const hasWeekly  = prots.some(x => /seman/i.test(x.frecuencia||''));
+    const hasMonthly = prots.some(x => /mens/i.test(x.frecuencia||''));
+    const freq = hasWeekly ? 7 : hasMonthly ? 30 : null;
+    if (!freq) return;
+    const dif = freq - days; // negative = overdue
+    if (dif > 2) return; // not due yet
+    const dot = dif < 0 ? '#dc2626' : dif === 0 ? '#d97706' : '#059669';
+    const label = dif < 0 ? `Atrasado ${Math.abs(dif)}d` : dif === 0 ? 'Hoy' : `En ${dif} día${dif>1?'s':''}`;
+    due.push({ id:p.id, nombre, dueInDays:dif, label, dot });
+  });
+  due.sort((a,b) => a.dueInDays - b.dueInDays);
+  if (!due.length) return '<div class="empty" style="padding:20px 0"><div class="icon" style="font-size:28px">✅</div><p style="font-size:13px">Todos al día esta semana</p></div>';
+  return due.slice(0,6).map(item => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(198,198,205,0.18);cursor:pointer" onclick="navigate('perfil','${item.id}')">
+      <div style="width:8px;height:8px;border-radius:50%;background:${item.dot};flex-shrink:0"></div>
+      <div style="flex:1;font-size:13px;font-weight:600;color:var(--on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(item.nombre)}</div>
+      <span style="font-size:11.5px;color:${item.dot};font-weight:700;white-space:nowrap">${item.label}</span>
+    </div>`).join('');
+}
+
+// ─── Alerta viales próximos a vencer ───
+function getVialesAlerta() {
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const en30 = new Date(hoy.getTime() + 30*86400000);
+  return getCompras().filter(c => {
+    if (!c.fecha_vencimiento) return false;
+    const fv = new Date(c.fecha_vencimiento+'T00:00:00');
+    return fv <= en30;
+  });
 }
 
 function renderProximasConsultas(db, hoy) {
@@ -1259,6 +1336,22 @@ function renderPacientesTable() {
         + (prots.length>3 ? `<span class="badge badge-gray">+${prots.length-3}</span>` : '')
       : '<span style="font-size:12px;color:var(--on-surface-variant)">Sin protocolo activo</span>';
 
+    // Balance pendiente
+    let totalPendiente = 0;
+    cons.forEach(c => { const pg = getConsultaPayment(c); totalPendiente += pg.monto_pendiente || 0; });
+    const deudaBadge = totalPendiente > 0
+      ? `<span style="background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap">Debe $${totalPendiente.toLocaleString('es-AR')}</span>`
+      : '';
+
+    // WhatsApp link
+    const tel = (d.telefono||'').replace(/\D/g,'');
+    const waHref = tel ? `https://wa.me/${tel}` : '';
+    const waBtn = tel
+      ? `<a href="${waHref}" target="_blank" class="btn btn-outline btn-sm btn-icon" title="WhatsApp" onclick="event.stopPropagation()" style="color:#25d366;border-color:#25d366;text-decoration:none">
+           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.129.558 4.121 1.531 5.847L.057 23.5l5.807-1.453A11.934 11.934 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.693-.502-5.241-1.382l-.375-.221-3.444.862.881-3.359-.244-.386A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+         </a>`
+      : '';
+
     // ── Card (mobile) ──
     const card = `
       <div class="patient-card-item">
@@ -1268,7 +1361,10 @@ function renderPacientesTable() {
             <div class="pci-name">${esc(d.nombre)} ${esc(d.apellido)}</div>
             <div class="pci-sub">${calcEdad(d.fecha_nacimiento)}${d.sexo?' · '+esc(d.sexo):''}${d.dni?' · '+esc(d.dni):''}</div>
           </div>
-          ${proxCon ? `<span class="badge ${proxClass}" style="flex-shrink:0;font-size:11px">${formatDate(proxCon)}</span>` : ''}
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+            ${deudaBadge}
+            ${proxCon ? `<span class="badge ${proxClass}" style="font-size:11px">${formatDate(proxCon)}</span>` : ''}
+          </div>
         </div>
         <div class="pci-peptides">${peptidosBadges}</div>
         <div class="pci-dates-row">
@@ -1279,12 +1375,17 @@ function renderPacientesTable() {
         </div>
         <div class="pci-actions">
           <button class="btn btn-primary btn-sm" onclick="navigate('perfil','${p.id}')"><span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle">person</span> Ver perfil</button>
+          <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openModalConsulta('${p.id}',null)" title="Registrar consulta de hoy" style="font-size:12px">➕ Consulta</button>
+          ${waBtn}
           <button class="btn btn-outline btn-sm btn-icon" onclick="navigate('editar','${p.id}')" title="Editar"><span class="material-symbols-outlined" style="font-size:14px">edit</span></button>
           <button class="btn btn-outline btn-sm btn-icon" style="color:var(--danger);border-color:var(--danger-light)" onclick="confirmarEliminar('${p.id}')" title="Eliminar"><span class="material-symbols-outlined" style="font-size:14px">delete</span></button>
         </div>
       </div>`;
 
     // ── Table row (desktop) ──
+    const telTd = tel
+      ? `<div style="font-size:12.5px">${esc(d.dni||'—')}</div><a href="${waHref}" target="_blank" style="font-size:11px;color:#25d366;text-decoration:none" title="WhatsApp">📱 ${esc(d.telefono)}</a>`
+      : `<div style="font-size:12.5px">${esc(d.dni||'—')}</div><div style="font-size:11px;color:var(--gray-500)">${esc(d.telefono||'')}</div>`;
     const row = `<tr>
       <td>
         <div style="display:flex;align-items:center;gap:10px">
@@ -1292,13 +1393,15 @@ function renderPacientesTable() {
           <div><div style="font-weight:600;color:var(--on-surface)">${esc(d.nombre)} ${esc(d.apellido)}</div><div style="font-size:11px;color:var(--on-surface-variant)">${d.sexo||''}</div></div>
         </div>
       </td>
-      <td><div style="font-size:12.5px">${esc(d.dni||'—')}</div><div style="font-size:11px;color:var(--gray-500)">${esc(d.telefono||'')}</div></td>
+      <td>${telTd}</td>
       <td>${calcEdad(d.fecha_nacimiento)}</td>
       <td>${prots.length ? prots.slice(0,2).map(x=>`<span class="badge badge-purple">${esc(x.peptido)}</span> `).join('')+(prots.length>2?`<span class="badge badge-gray">+${prots.length-2}</span>`:'') : '<span style="color:var(--gray-400);font-size:12px">—</span>'}</td>
       <td><span style="font-size:12.5px">${lastCon ? formatDate(lastCon.fecha) : '—'}</span></td>
       <td>${proxCon ? `<span class="badge ${proxClass}">${formatDate(proxCon)}</span>` : '—'}</td>
+      <td>${deudaBadge}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-ghost btn-sm" onclick="navigate('perfil','${p.id}')">Ver</button>
+        <button class="btn btn-outline btn-sm" style="font-size:11px" onclick="openModalConsulta('${p.id}',null)">➕</button>
         <button class="btn btn-outline btn-sm btn-icon" onclick="navigate('editar','${p.id}')" title="Editar">✏️</button>
         <button class="btn btn-outline btn-sm btn-icon" onclick="confirmarEliminar('${p.id}')" title="Eliminar">🗑️</button>
       </div></td>
@@ -1317,7 +1420,7 @@ function renderPacientesTable() {
       <table>
         <thead><tr>
           <th>Paciente</th><th>DNI / Contacto</th><th>Edad</th>
-          <th>Péptidos Activos</th><th>Última Consulta</th><th>Prox. Consulta</th><th></th>
+          <th>Péptidos Activos</th><th>Última Consulta</th><th>Prox. Consulta</th><th>Deuda</th><th></th>
         </tr></thead>
         <tbody>${rows.map(r=>r.row).join('')}</tbody>
       </table>
@@ -1393,7 +1496,8 @@ function renderTabDatos(p) {
 function renderTabPeptidos(p) {
   const prots = p.protocolo_peptidos || [];
   return `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px">
+      <button class="btn btn-outline btn-sm" onclick="openCopiarProtocolo('${p.id}')" title="Copiar protocolo de otro paciente">📋 Copiar de otro paciente</button>
       <button class="btn btn-primary" onclick="openModalPeptido('${p.id}',null)">➕ Agregar Péptido</button>
     </div>
     ${!prots.length ? `<div class="empty"><div class="icon">💉</div><h3>Sin protocolo cargado</h3><p>Agregá el primer péptido del protocolo</p></div>` : ''}
@@ -1663,6 +1767,54 @@ function openModal(html) {
   document.getElementById('modal-container').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`;
 }
 function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
+
+// — Copiar Protocolo de otro paciente —
+function openCopiarProtocolo(destId) {
+  const db = getDB();
+  const otros = db.filter(p => p.id !== destId && (p.protocolo_peptidos||[]).length > 0);
+  if (!otros.length) { showToast('No hay otros pacientes con protocolo cargado', 'error'); return; }
+  const opts = otros.map(p => {
+    const prots = (p.protocolo_peptidos||[]);
+    return `<option value="${p.id}">${esc(p.datos_personales.nombre)} ${esc(p.datos_personales.apellido)} (${prots.length} péptido${prots.length>1?'s':''})</option>`;
+  }).join('');
+  openModal(`<div class="modal">
+    <div class="modal-header"><h3>📋 Copiar Protocolo</h3><button class="close-btn" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:13.5px;color:var(--gray-600);margin-bottom:14px">Seleccioná el paciente cuyo protocolo querés copiar. Los péptidos se <strong>agregarán</strong> al protocolo actual sin reemplazar los existentes.</p>
+      <div class="form-group">
+        <label>Paciente origen</label>
+        <select id="copy-src-id">${opts}</select>
+      </div>
+      <div id="copy-preview" style="margin-top:12px;font-size:13px;color:var(--gray-600)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCopiarProtocolo('${destId}')">📋 Copiar péptidos</button>
+    </div>
+  </div>`);
+  // Preview al cambiar selección
+  document.getElementById('copy-src-id').addEventListener('change', e => {
+    const src = getPaciente(e.target.value);
+    if (!src) return;
+    const prots = src.protocolo_peptidos||[];
+    document.getElementById('copy-preview').innerHTML = prots.map(x=>`<span class="badge badge-purple" style="margin:2px">${esc(x.peptido)}</span>`).join('');
+  });
+  document.getElementById('copy-src-id').dispatchEvent(new Event('change'));
+}
+
+function confirmarCopiarProtocolo(destId) {
+  const srcId = document.getElementById('copy-src-id')?.value;
+  if (!srcId) return;
+  const src = getPaciente(srcId);
+  const dest = getPaciente(destId);
+  if (!src || !dest) return;
+  const nuevos = (src.protocolo_peptidos||[]).map(x => ({ ...x, id: undefined })); // remove id to get fresh entries
+  dest.protocolo_peptidos = [...(dest.protocolo_peptidos||[]), ...nuevos];
+  savePaciente(dest);
+  closeModal();
+  showToast(`✅ ${nuevos.length} péptido${nuevos.length>1?'s':''} copiado${nuevos.length>1?'s':''} al protocolo`, 'success');
+  profileTab = 'peptidos'; navigate('perfil', destId);
+}
 
 // — Modal Péptido —
 function openModalPeptido(pacienteId, idx) {
@@ -2629,6 +2781,7 @@ function modalNuevaCompra() {
         <div class="form-group"><label>Cantidad (mg)</label><input type="number" step="0.5" id="nc-mg" placeholder="Ej: 10"></div>
         <div class="form-group"><label>Fecha de adquisición *</label><input type="date" id="nc-fecha" value="${today}"></div>
       </div>
+      <div class="form-group"><label>Fecha de vencimiento</label><input type="date" id="nc-vencimiento"></div>
       <div class="form-group" id="nc-costo-group"><label>Costo total ($)</label><input type="number" step="0.01" id="nc-costo" placeholder="Ej: 5000"></div>
       <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="nc-cortesia-sup" onchange="document.getElementById('nc-costo-group').style.display=this.checked?'none':'block'"><span>🎁 Cortesía del suplidor (frasco gratis)</span></label></div>
       <div class="form-group"><label>Notas</label><textarea id="nc-notas" rows="2" placeholder="Ej: lote #123, descuento, etc."></textarea></div>
@@ -2642,7 +2795,8 @@ function guardarCompra() {
   if (!peptido||!fecha) { showToast('Completá los campos requeridos (péptido y fecha)', 'error'); return; }
   const cortesiaSup=document.getElementById('nc-cortesia-sup').checked, costo=parseFloat(document.getElementById('nc-costo').value)||0;
   const compras=getCompras();
-  compras.unshift({ id:newId(), peptido, mg:parseFloat(document.getElementById('nc-mg').value)||0, fecha_adquisicion:fecha, costo_total:cortesiaSup?0:costo, cortesia_suplidor:cortesiaSup, notas:document.getElementById('nc-notas').value.trim(), pagos:[], cortesias_clientes:[] });
+  const vencimiento = document.getElementById('nc-vencimiento').value || '';
+  compras.unshift({ id:newId(), peptido, mg:parseFloat(document.getElementById('nc-mg').value)||0, fecha_adquisicion:fecha, fecha_vencimiento:vencimiento, costo_total:cortesiaSup?0:costo, cortesia_suplidor:cortesiaSup, notas:document.getElementById('nc-notas').value.trim(), pagos:[], cortesias_clientes:[] });
   saveCompras(compras); closeModal(); renderProveedor(document.getElementById('content'));
 }
 
@@ -3061,6 +3215,29 @@ function renderReferencia(el) {
     <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
       <button class="btn btn-primary" onclick="openModalRef(null)">➕ Agregar Péptido</button>
     </div>
+
+    <!-- CALCULADORA DE RECONSTITUCIÓN -->
+    <div class="card" style="margin-bottom:20px">
+      <div style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+        <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#e0f2fe,#bae6fd);display:inline-flex;align-items:center;justify-content:center;font-size:14px">🧮</span>
+        Calculadora de Reconstitución
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end">
+        <div class="form-group" style="margin-bottom:0">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">Péptido (mg por vial)</label>
+          <input type="number" id="calc-mg" step="0.5" placeholder="Ej: 10" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">Concentración deseada (mg/mL)</label>
+          <input type="number" id="calc-conc" step="0.1" placeholder="Ej: 2.5" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
+        </div>
+        <div id="calc-result" style="padding:10px 16px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap;min-width:120px;text-align:center;height:42px;display:flex;align-items:center;justify-content:center">
+          — mL agua
+        </div>
+      </div>
+      <div id="calc-detail" style="margin-top:10px;font-size:12px;color:var(--on-surface-variant)"></div>
+    </div>
+
     <div class="card" style="padding:0">
       <div class="ref-wrap">
         <table class="ref-table">
@@ -3075,14 +3252,14 @@ function renderReferencia(el) {
           </tr></thead>
           <tbody>
             ${data.length ? data.map((item, i) => `
-              <tr>
+              <tr style="cursor:pointer" onclick="document.getElementById('calc-mg').value='${parseFloat(item.presentacion)||''}';document.getElementById('calc-conc').value='${parseFloat(item.concentracion)||''}';calcReconstitucion();document.getElementById('calc-mg').scrollIntoView({behavior:'smooth',block:'center'})">
                 <td><strong>${esc(item.nombre)}</strong></td>
                 <td>${esc(item.presentacion)}</td>
                 <td style="text-align:center">${item.diluyente_ml} mL</td>
                 <td><span class="badge badge-blue">${esc(item.concentracion)}</span></td>
                 <td><span class="badge badge-gray">${esc(item.via)}</span></td>
                 <td style="font-size:12px;color:var(--on-surface-variant)">${item.notas ? esc(item.notas) : '—'}</td>
-                <td>
+                <td onclick="event.stopPropagation()">
                   <div style="display:flex;gap:4px">
                     <button class="btn btn-outline btn-sm" onclick="openModalRef(${i})">✏️</button>
                     <button class="btn btn-outline btn-sm" onclick="eliminarRef(${i})">🗑️</button>
@@ -3092,8 +3269,23 @@ function renderReferencia(el) {
           </tbody>
         </table>
       </div>
-      <div style="padding:10px 16px;font-size:11.5px;color:var(--on-surface-variant);border-top:1px solid var(--outline-variant)">${data.length} péptido(s) · Editá cualquier fila con ✏️ · Los cambios se guardan en este dispositivo</div>
+      <div style="padding:10px 16px;font-size:11.5px;color:var(--on-surface-variant);border-top:1px solid var(--outline-variant)">${data.length} péptido(s) · Hacé clic en una fila para usar la calculadora · Editá con ✏️</div>
     </div>`;
+}
+
+function calcReconstitucion() {
+  const mg   = parseFloat(document.getElementById('calc-mg')?.value) || 0;
+  const conc = parseFloat(document.getElementById('calc-conc')?.value) || 0;
+  const res  = document.getElementById('calc-result');
+  const det  = document.getElementById('calc-detail');
+  if (!res) return;
+  if (!mg || !conc) { res.textContent = '— mL agua'; det.textContent = ''; return; }
+  const ml = +(mg / conc).toFixed(2);
+  res.textContent = `${ml} mL agua`;
+  res.style.color = 'var(--primary)';
+  // Volumen por dosis (0.1 mL jeringa U-100 = 10 UI)
+  const dosisPorJeringa = +(0.1 * conc).toFixed(3);
+  det.innerHTML = `Con <strong>${ml} mL</strong> de agua bacteriostática obtenés <strong>${conc} mg/mL</strong>. Cada 0.1 mL de jeringa = <strong>${dosisPorJeringa} mg</strong>.`;
 }
 
 function openModalRef(idx) {
@@ -3161,6 +3353,59 @@ function updateBottomNav(page) {
 }
 function openMoreDrawer() { document.getElementById('more-drawer').classList.add('open'); document.getElementById('more-drawer-overlay').style.display='block'; document.body.style.overflow='hidden'; }
 function closeMoreDrawer() { const d=document.getElementById('more-drawer'); if(d) d.classList.remove('open'); const o=document.getElementById('more-drawer-overlay'); if(o) o.style.display='none'; document.body.style.overflow=''; }
+
+// ═══════════════════════════════════════════════════
+//  BÚSQUEDA GLOBAL
+// ═══════════════════════════════════════════════════
+function globalSearch(term) {
+  const drop = document.getElementById('global-search-drop');
+  if (!drop) return;
+  if (!term || term.length < 2) { drop.style.display = 'none'; return; }
+  const t = term.toLowerCase();
+  const results = getDB().filter(p => {
+    const d = p.datos_personales;
+    return (d.nombre||'').toLowerCase().includes(t)
+        || (d.apellido||'').toLowerCase().includes(t)
+        || (d.dni||'').toLowerCase().includes(t)
+        || (d.telefono||'').includes(t);
+  }).slice(0, 8);
+  if (!results.length) {
+    drop.innerHTML = '<div style="padding:14px 16px;font-size:13px;color:var(--gray-400)">Sin resultados</div>';
+  } else {
+    drop.innerHTML = results.map(p => {
+      const d = p.datos_personales;
+      const prots = (p.protocolo_peptidos||[]).filter(x=>x.activo).length;
+      return `<div style="padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--surface-container);display:flex;align-items:center;gap:10px"
+        onmousedown="globalSearchSelect('${p.id}')"
+        onmouseover="this.style.background='var(--surface-container-low)'"
+        onmouseout="this.style.background=''">
+        <div style="width:32px;height:32px;border-radius:8px;background:rgba(0,81,213,0.1);display:flex;align-items:center;justify-content:center;color:#0051d5;font-weight:700;font-size:13px;flex-shrink:0">${(d.nombre||'?')[0].toUpperCase()}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600">${esc(d.nombre)} ${esc(d.apellido)}</div>
+          <div style="font-size:11px;color:var(--gray-500)">${prots} péptido${prots!==1?'s':''} activo${prots!==1?'s':''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  drop.style.display = 'block';
+}
+
+function globalSearchSelect(id) {
+  const input = document.getElementById('global-search');
+  const drop  = document.getElementById('global-search-drop');
+  if (input) input.value = '';
+  if (drop)  drop.style.display = 'none';
+  navigate('perfil', id);
+}
+
+// Cerrar el dropdown al hacer clic fuera
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('global-search-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const drop = document.getElementById('global-search-drop');
+    if (drop) drop.style.display = 'none';
+  }
+});
 
 // ═══════════════════════════════════════════════════
 //  INIT
