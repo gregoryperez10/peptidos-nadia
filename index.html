@@ -2252,11 +2252,16 @@ function renderImportPreview(rows) {
   const cols = Object.keys(rows[0]);
   const autoMap = {
     nombre:['nombre','name','firstname','first_name'], apellido:['apellido','surname','lastname','last_name'],
-    dni:['dni','documento','id','cedula','rut'], fecha_nacimiento:['fecha nacimiento','fecha_nacimiento','birth','nacimiento'],
+    dni:['dni','documento','id','cedula','rut'], fecha_nacimiento:['fecha nacimiento','fecha_nacimiento','birth','nacimiento','fecha nac'],
     sexo:['sexo','genero','género','sex','gender'], telefono:['telefono','teléfono','phone','cel','celular'],
     email:['email','correo','mail'], ciudad:['ciudad','city','localidad'],
     peso:['peso','weight','kg'], altura:['altura','height','cm','talla'],
-    peptido:['peptido','péptido','peptide','tratamiento'], dosis:['dosis','dose'],
+    antecedentes:['antecedentes','medical history'],
+    peptido:['péptidos activos','peptidos activos','peptido','péptido','peptide','tratamiento'], dosis:['dosis','dose'],
+    frecuencia:['frecuencia','frequency'],
+    ultima_consulta:['última consulta','ultima consulta','last visit'],
+    proxima_consulta:['próxima consulta','proxima consulta','next visit'],
+    notas_consulta:['notas última consulta','notas ultima consulta','notas consulta','notas'],
   };
   document.getElementById('import-preview').innerHTML = `<div class="card">
     <div class="card-title">👁️ Vista Previa — ${rows.length} filas detectadas</div>
@@ -2315,12 +2320,23 @@ function ejecutarImport() {
   if (!Object.values(mapping).includes('nombre') && !Object.values(mapping).includes('apellido')) {
     showToast('Asigná al menos el campo Nombre o Apellido', 'error'); return;
   }
+  const DATE_FIELDS = new Set(['fecha_nacimiento','ultima_consulta','proxima_consulta','fecha_inicio']);
+  function _normalizeDate(v) {
+    if (!v && v !== 0) return '';
+    if (v instanceof Date) return v.toISOString().split('T')[0];
+    if (typeof v === 'number') return new Date(Math.round((v - 25569) * 86400000)).toISOString().split('T')[0];
+    const s = String(v).trim();
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : s;
+  }
   let imported = 0;
   importData.forEach(row => {
     const p = { id:newId(), datos_personales:{}, protocolo_peptidos:[], historial_consultas:[], resultados:[] };
     const dp={}, prot={}, cons={}; let hasProt=false, hasCons=false;
     for (const [col, field] of Object.entries(mapping)) {
-      const val = String(row[col]||'').trim(); if (!val) continue;
+      const raw = row[col];
+      const val = DATE_FIELDS.has(field) ? _normalizeDate(raw) : String(raw||'').trim();
+      if (!val) continue;
       if (['nombre','apellido','dni','fecha_nacimiento','sexo','telefono','email','ciudad','peso','altura','ocupacion','antecedentes'].includes(field)) dp[field] = val;
       else if (['peptido','dosis','frecuencia','via','objetivo','fecha_inicio'].includes(field)) { prot[field] = val; hasProt = true; }
       else if (['ultima_consulta','notas_consulta','proxima_consulta'].includes(field)) {
