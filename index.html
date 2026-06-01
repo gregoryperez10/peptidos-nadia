@@ -2905,12 +2905,18 @@ const SYNC_LAST_KEY  = 'peptidos_last_sync';
 const GIST_FILENAME  = 'peptidos_backup.json';
 const GIST_DESC      = 'Peptidos-App-Backup';
 
-// ─── CREDENCIALES PRECARGADAS (sincronización automática) ───
-const _PRESET_TOKEN   = 'ghp_MJRCHCDVbjM3WD9j9SrPgZFIX1xX8S3yxV0n';
+// ─── CREDENCIALES PRECARGADAS ───────────────────────────────
+// El token se eliminó del código fuente porque GitHub lo revoca
+// automáticamente cuando está expuesto en repositorios públicos.
+// Nadia debe generar su propio token en github.com/settings/tokens
+const _REVOKED_TOKEN  = 'ghp_MJRCHCDVbjM3WD9j9SrPgZFIX1xX8S3yxV0n';
 const _PRESET_GIST_ID = 'efd5d0987a2eebaeb4a7b9eb3afb3059';
 (function _initPreset() {
-  if (!localStorage.getItem(SYNC_TOKEN_KEY))   localStorage.setItem(SYNC_TOKEN_KEY,   _PRESET_TOKEN);
-  if (!localStorage.getItem(SYNC_GIST_KEY))    localStorage.setItem(SYNC_GIST_KEY,    _PRESET_GIST_ID);
+  // Limpiar el token revocado si alguien lo tiene guardado
+  if (localStorage.getItem(SYNC_TOKEN_KEY) === _REVOKED_TOKEN) {
+    localStorage.removeItem(SYNC_TOKEN_KEY);
+  }
+  if (!localStorage.getItem(SYNC_GIST_KEY)) localStorage.setItem(SYNC_GIST_KEY, _PRESET_GIST_ID);
 })();
 // ────────────────────────────────────────────────────────────
 
@@ -3020,7 +3026,11 @@ async function ghFetch(path, options) {
     ...options,
     headers: { 'Authorization':'Bearer '+token, 'Content-Type':'application/json', 'Accept':'application/vnd.github+json', ...(options?.headers||{}) }
   });
-  if (!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.message||`Error ${res.status}`); }
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    if (res.status === 401) throw new Error('Token inválido o vencido — actualizá el token en ⚙️ Configuración');
+    throw new Error(err.message||`Error ${res.status}`);
+  }
   return res.json();
 }
 
@@ -3119,6 +3129,10 @@ function renderSync(el) {
 
 function renderSyncSetup(el) {
   el.innerHTML = `<div style="max-width:620px;margin:0 auto">
+    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--radius);padding:13px 16px;margin-bottom:16px;font-size:13px;color:#92400e">
+      <strong>⚠️ Necesitás configurar un nuevo token.</strong> El token anterior venció o fue revocado.
+      Seguí los pasos de abajo para generar uno nuevo — es gratis y tarda menos de 2 minutos.
+    </div>
     <div class="card">
       <div class="card-title">☁️ Configurar Sincronización Automática</div>
       <p style="font-size:13.5px;color:var(--gray-600);margin-bottom:16px;line-height:1.7">
