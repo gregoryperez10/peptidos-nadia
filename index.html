@@ -840,6 +840,38 @@ select { background: var(--white); cursor: pointer; }
 .pci-actions { display: flex; gap: 6px; padding-left: 52px; }
 /* Tabla visible en desktop */
 .patient-table-wrap { display: block; }
+
+/* ══════════════════════════════════════════
+   IMC GAUGE
+══════════════════════════════════════════ */
+.imc-gauge-card { text-align:center; background:#fff; border-radius:var(--radius-lg); padding:20px 16px 14px; border:1px solid rgba(198,198,205,0.4); box-shadow:var(--shadow-glow); margin-bottom:14px; }
+.imc-gauge-row { display:flex; align-items:center; justify-content:center; gap:24px; flex-wrap:wrap; }
+.imc-stats { text-align:left; }
+.imc-stat-row { display:flex; align-items:baseline; gap:6px; margin-bottom:6px; }
+.imc-stat-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--on-surface-variant); }
+.imc-stat-value { font-size:15px; font-weight:700; color:var(--on-surface); }
+
+/* ══════════════════════════════════════════
+   TABLA REFERENCIA PÉPTIDOS
+══════════════════════════════════════════ */
+.ref-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.ref-table { width:100%; border-collapse:collapse; font-size:13px; white-space:nowrap; }
+.ref-table th { padding:10px 14px; text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--on-surface-variant); background:var(--surface-container-low); border-bottom:2px solid var(--outline-variant); }
+.ref-table td { padding:11px 14px; border-bottom:1px solid var(--surface-container); vertical-align:middle; }
+.ref-table tr:hover td { background:var(--surface-container-low); }
+.ref-table td:last-child { white-space:normal; }
+
+/* ══════════════════════════════════════════
+   MÉTODO DE PAGO + DEUDA
+══════════════════════════════════════════ */
+.pay-pill { display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+.pay-efectivo      { background:#dcfce7; color:#166534; }
+.pay-transferencia { background:#dbeafe; color:#1d4ed8; }
+.pay-cortesia      { background:#f3e8ff; color:#6b21a8; }
+.deuda-reminder { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; background:var(--warning-light); border:1px solid #fcd34d; border-radius:var(--radius-sm); margin-bottom:14px; font-size:13px; color:#78350f; line-height:1.5; }
+.metodo-radio-row { display:flex; gap:8px; margin-top:6px; }
+.metodo-radio-label { flex:1; display:flex; align-items:center; gap:8px; padding:9px 14px; border-radius:var(--radius-sm); border:2px solid var(--outline-variant); background:white; cursor:pointer; transition:border-color .15s, background .15s; font-size:13.5px; }
+.metodo-radio-label.selected { border-color:var(--primary); background:var(--primary-bg); }
 </style>
 </head>
 <body>
@@ -881,6 +913,10 @@ select { background: var(--white); cursor: pointer; }
     <div class="nav-section-label" style="margin-top:10px">Inventario</div>
     <div class="nav-item" onclick="navigate('proveedor')">
       <span class="nav-icon">inventory_2</span> Inventario
+    </div>
+    <div class="nav-section-label" style="margin-top:10px">Herramientas</div>
+    <div class="nav-item" onclick="navigate('referencia')">
+      <span class="nav-icon">science</span> Tabla Péptidos
     </div>
     <div class="nav-section-label" style="margin-top:10px">Datos</div>
     <div class="nav-item" onclick="navigate('sync')">
@@ -947,6 +983,9 @@ select { background: var(--white); cursor: pointer; }
   </div>
   <div class="more-item" onclick="closeMoreDrawer();exportarExcel()">
     <span class="more-icon"><span class="material-symbols-outlined" style="font-size:20px;color:#0051d5">download</span></span> Exportar Excel
+  </div>
+  <div class="more-item" onclick="closeMoreDrawer();navigate('referencia')">
+    <span class="more-icon"><span class="material-symbols-outlined" style="font-size:20px;color:#0051d5">science</span></span> Tabla de Péptidos
   </div>
   <div class="more-item" onclick="closeMoreDrawer();navigate('sync')">
     <span class="more-icon"><span class="material-symbols-outlined" style="font-size:20px;color:#0051d5">cloud_sync</span></span> Sincronizar
@@ -1018,14 +1057,14 @@ function navigate(page, param) {
   closeMoreDrawer();
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   updateBottomNav(page);
-  const navMap = { dashboard:0, pacientes:1, nuevo:2, importar:3, asistente:5, finanzas:6, proveedor:7, sync:8 };
+  const navMap = { dashboard:0, pacientes:1, nuevo:2, importar:3, asistente:5, finanzas:6, proveedor:7, referencia:8, sync:9 };
   const navItems = document.querySelectorAll('.nav-item');
   if (navMap[page] !== undefined) navItems[navMap[page]]?.classList.add('active');
 
   const titles = {
     dashboard:'Dashboard', pacientes:'Lista de Pacientes', nuevo:'Nuevo Paciente',
     perfil:'Perfil del Paciente', editar:'Editar Paciente', importar:'Importar desde Excel',
-    asistente:'💬 Asistente IA', finanzas:'💰 Finanzas', proveedor:'📦 Proveedor / Frascos', sync:'☁️ Sincronizar',
+    asistente:'💬 Asistente IA', finanzas:'💰 Finanzas', proveedor:'📦 Proveedor / Frascos', referencia:'🔬 Tabla de Péptidos', sync:'☁️ Sincronizar',
   };
   document.getElementById('page-title').textContent = titles[page] || page;
   const actions = document.getElementById('topbar-actions');
@@ -1044,6 +1083,7 @@ function navigate(page, param) {
   else if (page === 'finanzas')  renderFinanzas(content);
   else if (page === 'proveedor') renderProveedor(content);
   else if (page === 'sync')      renderSync(content);
+  else if (page === 'referencia') renderReferencia(content);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1325,6 +1365,7 @@ function renderPerfil(el, id) {
       ${profileTab === 'resultados'  ? renderTabResultados(p)  : ''}
       ${profileTab === 'comentarios' ? renderTabComentarios(p) : ''}
     </div>`;
+  if (profileTab === 'resultados') setTimeout(initImcGauges, 50);
 }
 
 function renderTabDatos(p) {
@@ -1382,16 +1423,47 @@ function renderTabPeptidos(p) {
 function renderTabConsultas(p) {
   const cons = p.historial_consultas || [];
   const sorted = [...cons].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+
+  // Calcular deuda total pendiente
+  let totalPendiente = 0;
+  cons.forEach(c => { const pg = getConsultaPayment(c); totalPendiente += pg.monto_pendiente || 0; });
+  const proximaConsulta = cons.map(c=>c.proxima_consulta).filter(Boolean).sort().reverse()[0];
+
   return `
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
       <button class="btn btn-primary" onclick="openModalConsulta('${p.id}',null)">➕ Nueva Consulta</button>
     </div>
+
+    ${totalPendiente > 0 ? `
+      <div class="deuda-reminder">
+        <span style="font-size:20px">⏰</span>
+        <div>
+          <strong>Saldo pendiente: $${totalPendiente.toLocaleString('es-AR')}</strong>
+          ${proximaConsulta ? `<br>Recordar cobrar en la próxima cita · <span style="font-weight:700">${formatDate(proximaConsulta)}</span>` : ''}
+        </div>
+      </div>` : ''}
+
     ${!cons.length ? `<div class="empty"><div class="icon">🗂️</div><h3>Sin consultas registradas</h3><p>Registrá la primera consulta del paciente</p></div>` : ''}
+
     ${sorted.map(c => {
       const origI = cons.indexOf(c);
       const pago = getConsultaPayment(c);
-      const badgeClass = pago.estado_pago==='pagado'?'badge-green':pago.estado_pago==='pendiente'?'badge-red':'badge-yellow';
-      const badgeLabel = pago.estado_pago==='pagado'?'✅ Pagado':pago.estado_pago==='pendiente'?'⏳ Pendiente':'⚡ Parcial';
+      const isCortesia = c.cortesia || c.estado_pago === 'cortesia';
+
+      // Badge de cobro
+      let pagoBadge = '';
+      if (isCortesia) {
+        pagoBadge = `<span class="pay-pill pay-cortesia">🎁 Cortesía</span>`;
+      } else if (pago.monto) {
+        const cls = pago.estado_pago==='pagado'?'badge-green':pago.estado_pago==='pendiente'?'badge-red':'badge-yellow';
+        const lbl = pago.estado_pago==='pagado'?'✅ Pagado':pago.estado_pago==='pendiente'?'⏳ Pendiente':'⚡ Parcial';
+        pagoBadge = `<span class="badge ${cls}">${lbl} · $${pago.monto.toLocaleString('es-AR')}</span>`;
+      }
+
+      // Badge método de pago
+      const metodoBadge = !isCortesia && c.metodo_pago ?
+        `<span class="pay-pill ${c.metodo_pago==='transferencia'?'pay-transferencia':'pay-efectivo'}">${c.metodo_pago==='transferencia'?'📲':'💵'} ${c.metodo_pago==='transferencia'?'Transferencia':'Efectivo'}</span>` : '';
+
       return `<div class="consulta-item">
         <div class="consulta-header">
           <div>
@@ -1404,25 +1476,100 @@ function renderTabConsultas(p) {
           </div>
         </div>
         ${c.notas ? `<div class="consulta-notas">${esc(c.notas)}</div>` : ''}
-        ${pago.monto ? `<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span class="badge ${badgeClass}">${badgeLabel} · $${pago.monto.toLocaleString('es-AR')}</span>
-          ${pago.monto_pendiente>0?`<span style="font-size:11.5px;color:var(--danger)">Pendiente: $${pago.monto_pendiente.toLocaleString('es-AR')}</span>`:''}
-        </div>` : ''}
-        ${c.proxima_consulta ? `<div style="margin-top:6px;font-size:12px;color:var(--success);font-weight:600">📅 Próxima: ${formatDate(c.proxima_consulta)}</div>` : ''}
+        <div style="margin-top:7px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          ${pagoBadge}
+          ${metodoBadge}
+          ${!isCortesia && pago.monto_pendiente>0 ? `<span style="font-size:11.5px;color:var(--danger);font-weight:600">Debe: $${pago.monto_pendiente.toLocaleString('es-AR')}</span>` : ''}
+        </div>
+        ${c.proxima_consulta ? `<div style="margin-top:5px;font-size:12px;color:var(--success);font-weight:600">📅 Próxima: ${formatDate(c.proxima_consulta)}</div>` : ''}
       </div>`;
     }).join('')}`;
+}
+
+function buildImcGauge(imc, peso, alturaNum, sexo) {
+  const W=220, H=118, cx=110, cy=110, R=88, Ri=58;
+  const minI=10, maxI=40;
+  const clamp = v => Math.max(minI, Math.min(maxI, v));
+  // angle: minI→180° (left), maxI→0° (right), passing through top(90°)
+  const toAngle = v => 180 - (clamp(v) - minI) / (maxI - minI) * 180;
+  const pt = (deg, r) => {
+    const rad = deg * Math.PI / 180;
+    return [+(cx + r*Math.cos(rad)).toFixed(1), +(cy - r*Math.sin(rad)).toFixed(1)];
+  };
+  const arcPath = (v1, v2) => {
+    const a1=toAngle(v1), a2=toAngle(v2);
+    const [ox1,oy1]=pt(a1,R), [ox2,oy2]=pt(a2,R), [ix2,iy2]=pt(a2,Ri), [ix1,iy1]=pt(a1,Ri);
+    const lg = Math.abs(a1-a2)>=180?1:0;
+    return `M${ox1},${oy1} A${R},${R} 0 ${lg} 0 ${ox2},${oy2} L${ix2},${iy2} A${Ri},${Ri} 0 ${lg} 1 ${ix1},${iy1}Z`;
+  };
+  const zones=[[10,18.5,'#93c5fd'],[18.5,25,'#34d399'],[25,30,'#fbbf24'],[30,35,'#f87171'],[35,40,'#b91c1c']];
+  const arcs = zones.map(([f,t,c])=>`<path d="${arcPath(f,t)}" fill="${c}"/>`).join('');
+  const ticks=[18.5,25,30,35].map(v=>{const a=toAngle(v);const[ox,oy]=pt(a,R+4);const[ix,iy]=pt(a,Ri-4);return`<line x1="${ox}" y1="${oy}" x2="${ix}" y2="${iy}" stroke="white" stroke-width="2.5" stroke-linecap="round"/>`;}).join('');
+  const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb',bg:'#dbeafe'}:imc<25?{l:'Normal ✓',c:'#059669',bg:'#d1fae5'}:imc<30?{l:'Sobrepeso',c:'#d97706',bg:'#fef3c7'}:imc<35?{l:'Obesidad I',c:'#dc2626',bg:'#fee2e2'}:{l:'Obesidad II+',c:'#991b1b',bg:'#fecaca'};
+  const cssRot = +((clamp(imc) - minI) / (maxI - minI) * 180 - 90).toFixed(1);
+  const uid = 'n'+(Date.now()%99999);
+  // Ideal weight (Hamwi)
+  let idealHtml = '';
+  if (alturaNum) {
+    const inchTotal = alturaNum / 2.54, over = Math.max(0, inchTotal - 60);
+    const ideal = parseFloat((sexo==='Masculino' ? 48+2.7*over : 45.5+2.2*over).toFixed(1));
+    const diff = peso ? +(parseFloat(peso)-ideal).toFixed(1) : null;
+    const diffStr = diff!=null ? (diff>0?`+${diff} kg por encima`:`${Math.abs(diff)} kg por debajo`) : '';
+    idealHtml = `<div style="font-size:12px;color:var(--on-surface-variant);margin-top:6px">Peso ideal estimado: <strong style="color:var(--on-surface)">${ideal} kg</strong>${diff!=null?' · <span style="color:'+cat.c+'">'+diffStr+'</span>':''}</div>`;
+  }
+  return `<div style="text-align:center">
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;overflow:visible">${arcs}${ticks}
+      <line id="${uid}" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-R+5}" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" class="imc-needle-anim" data-rot="${cssRot}" style="transform-origin:${cx}px ${cy}px;transform:rotate(-90deg)"/>
+      <circle cx="${cx}" cy="${cy}" r="7" fill="#0f172a"/><circle cx="${cx}" cy="${cy}" r="3.5" fill="#f8fafc"/>
+      <text x="6" y="${cy+15}" font-size="8.5" fill="#3b82f6" font-weight="700">Bajo</text>
+      <text x="${cx-15}" y="14" font-size="8.5" fill="#059669" font-weight="700">Normal</text>
+      <text x="${W-36}" y="${cy+15}" font-size="8.5" fill="#b91c1c" font-weight="700">Obeso</text>
+    </svg>
+    <div style="font-size:34px;font-weight:800;color:${cat.c};line-height:1;margin-top:-4px">${imc}</div>
+    <span style="background:${cat.bg};color:${cat.c};padding:3px 14px;border-radius:20px;font-size:12px;font-weight:700">${cat.l}</span>
+    ${idealHtml}
+  </div>`;
+}
+
+function initImcGauges() {
+  document.querySelectorAll('.imc-needle-anim').forEach(function(el) {
+    const target = el.getAttribute('data-rot');
+    el.classList.remove('imc-needle-anim');
+    setTimeout(function(){
+      el.style.transition = 'transform 1.3s cubic-bezier(0.34,1.36,0.64,1)';
+      el.style.transform = 'rotate('+target+'deg)';
+    }, 80);
+  });
 }
 
 function renderTabResultados(p) {
   const res = p.resultados || [];
   const sorted = [...res].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+  const d = p.datos_personales;
+
+  // Usar el registro más reciente para el gauge
+  const last = sorted[0];
+  const pesoVal = parseFloat(last?.peso || d.peso || 0);
+  const altVal  = parseFloat(last?.altura || d.altura || 0);
+  const imcVal  = (pesoVal && altVal) ? parseFloat((pesoVal / Math.pow(altVal/100, 2)).toFixed(1)) : null;
+
+  const gaugeHtml = imcVal ? `
+    <div class="imc-gauge-card">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant);margin-bottom:10px">📊 Estado Actual · ${pesoVal} kg · ${altVal} cm</div>
+      <div class="imc-gauge-row">
+        ${buildImcGauge(imcVal, pesoVal, altVal, d.sexo)}
+      </div>
+    </div>` : '';
+
   return `
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
       <button class="btn btn-primary" onclick="openModalResultado('${p.id}',null)">➕ Nuevo Registro</button>
     </div>
+    ${gaugeHtml}
     ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Registrá el peso, laboratorios y observaciones</p></div>` : ''}
     ${sorted.map(r => {
       const origI = res.indexOf(r);
+      const rImc = r.imc || (r.peso && r.altura ? parseFloat((parseFloat(r.peso)/Math.pow(parseFloat(r.altura)/100,2)).toFixed(1)) : null);
       return `<div class="resultado-item">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-weight:700;color:var(--primary)">📅 ${formatDate(r.fecha)}</div>
@@ -1433,7 +1580,8 @@ function renderTabResultados(p) {
         </div>
         <div class="resultado-grid">
           ${r.peso     ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} kg</div></div>` : ''}
-          ${r.imc      ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${r.imc}</div></div>` : ''}
+          ${r.altura   ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${r.altura} cm</div></div>` : ''}
+          ${rImc       ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}</div></div>` : ''}
           ${r.tension  ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Tensión</div><div style="font-weight:600">${r.tension}</div></div>` : ''}
           ${r.glucemia ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Glucemia</div><div style="font-weight:600">${r.glucemia}</div></div>` : ''}
         </div>
@@ -1610,6 +1758,8 @@ async function eliminarPeptido(pacienteId, idx) {
 function openModalConsulta(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   const c = idx !== null ? p.historial_consultas[idx] : null;
+  const isCortesia = c?.cortesia || false;
+  const metodo = c?.metodo_pago || 'efectivo';
   openModal(`<div class="modal">
     <div class="modal-header">
       <h3>🗂️ ${c ? 'Editar Consulta' : 'Nueva Consulta'}</h3>
@@ -1625,20 +1775,49 @@ function openModalConsulta(pacienteId, idx) {
         <label>Notas clínicas</label>
         <textarea id="c-notas" rows="3" placeholder="Observaciones, respuesta al tratamiento, cambios en el protocolo...">${esc(c?.notas||'')}</textarea>
       </div>
-      <hr style="margin:16px 0;border:none;border-top:1px solid var(--gray-200)">
-      <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--gray-700)">💰 Pago de la Sesión</div>
-      <div class="form-grid">
-        <div class="form-group"><label>Monto ($)</label><input type="number" id="c-monto" value="${c?.monto||''}" placeholder="Ej: 5000"></div>
-        <div class="form-group"><label>Estado de Pago</label>
-          <select id="c-estado-pago" onchange="document.getElementById('c-pendiente-group').style.display=this.value==='parcial'?'':'none'">
-            <option value="pagado"   ${(!c||!c.estado_pago||c.estado_pago==='pagado')?'selected':''}>✅ Pagado</option>
-            <option value="pendiente" ${c?.estado_pago==='pendiente'?'selected':''}>⏳ Pendiente</option>
-            <option value="parcial"   ${c?.estado_pago==='parcial'?'selected':''}>⚡ Parcial</option>
-          </select>
+      <hr style="margin:14px 0;border:none;border-top:1px solid var(--gray-200)">
+
+      <!-- Toggle cortesía -->
+      <label style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surface-container-low);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:12px;border:2px solid ${isCortesia?'var(--accent)':'transparent'};transition:border-color .15s" id="cortesia-lbl">
+        <input type="checkbox" id="c-cortesia" ${isCortesia?'checked':''} onchange="toggleCortesiaModal(this.checked)" style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        <div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--accent)">🎁 Sesión de cortesía</div>
+          <div style="font-size:11.5px;color:var(--on-surface-variant)">Marcar cuando la dosis es un regalo — no se registra cobro</div>
         </div>
-        <div class="form-group" id="c-pendiente-group" style="${c?.estado_pago==='parcial'?'':'display:none'}">
-          <label>Monto Pendiente ($)</label>
-          <input type="number" id="c-monto-pendiente" value="${c?.monto_pendiente||''}" placeholder="Ej: 2000">
+      </label>
+
+      <!-- Sección de pago (se oculta si es cortesía) -->
+      <div id="c-pago-section" style="${isCortesia?'display:none':''}">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--gray-700)">💰 Pago de la Sesión</div>
+
+        <!-- Método de pago -->
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">Método de Pago</label>
+          <div class="metodo-radio-row">
+            <label class="metodo-radio-label${metodo==='efectivo'?' selected':''}" id="lbl-efectivo">
+              <input type="radio" name="c-metodo" value="efectivo" ${metodo==='efectivo'?'checked':''} onchange="updateMetodoPago('efectivo')" style="accent-color:var(--primary)">
+              💵 Efectivo
+            </label>
+            <label class="metodo-radio-label${metodo==='transferencia'?' selected':''}" id="lbl-transferencia">
+              <input type="radio" name="c-metodo" value="transferencia" ${metodo==='transferencia'?'checked':''} onchange="updateMetodoPago('transferencia')" style="accent-color:var(--primary)">
+              📲 Transferencia
+            </label>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group"><label>Monto ($)</label><input type="number" id="c-monto" value="${c?.monto||''}" placeholder="Ej: 5000"></div>
+          <div class="form-group"><label>Estado de Pago</label>
+            <select id="c-estado-pago" onchange="document.getElementById('c-pendiente-group').style.display=this.value==='parcial'?'':'none'">
+              <option value="pagado"   ${(!c||!c.estado_pago||c.estado_pago==='pagado'||c.estado_pago==='cortesia')?'selected':''}>✅ Pagado</option>
+              <option value="pendiente" ${c?.estado_pago==='pendiente'?'selected':''}>⏳ Pendiente</option>
+              <option value="parcial"   ${c?.estado_pago==='parcial'?'selected':''}>⚡ Parcial</option>
+            </select>
+          </div>
+          <div class="form-group" id="c-pendiente-group" style="${c?.estado_pago==='parcial'?'':'display:none'}">
+            <label>Monto Pendiente ($)</label>
+            <input type="number" id="c-monto-pendiente" value="${c?.monto_pendiente||''}" placeholder="Ej: 2000">
+          </div>
         </div>
       </div>
     </div>
@@ -1649,19 +1828,37 @@ function openModalConsulta(pacienteId, idx) {
   </div>`);
 }
 
+function toggleCortesiaModal(checked) {
+  const sec = document.getElementById('c-pago-section');
+  const lbl = document.getElementById('cortesia-lbl');
+  if (sec) sec.style.display = checked ? 'none' : '';
+  if (lbl) lbl.style.borderColor = checked ? 'var(--accent)' : 'transparent';
+}
+
+function updateMetodoPago(val) {
+  ['efectivo','transferencia'].forEach(m => {
+    const el = document.getElementById('lbl-'+m);
+    if (el) { el.classList.toggle('selected', m === val); }
+  });
+}
+
 function guardarConsulta(pacienteId, idx) {
   const fecha = document.getElementById('c-fecha').value;
   if (!fecha) { showToast('Ingresá la fecha de la consulta', 'error'); return; }
   const p = getPaciente(pacienteId);
-  const monto = parseFloat(document.getElementById('c-monto').value) || 0;
-  const estadoPago = document.getElementById('c-estado-pago').value || 'pagado';
-  const montoPend = parseFloat(document.getElementById('c-monto-pendiente').value) || 0;
+  const isCortesia = document.getElementById('c-cortesia')?.checked || false;
+  const metodoEl = document.querySelector('[name="c-metodo"]:checked');
+  const monto = !isCortesia ? (parseFloat(document.getElementById('c-monto').value) || 0) : 0;
+  const estadoPago = isCortesia ? 'cortesia' : (document.getElementById('c-estado-pago').value || 'pagado');
+  const montoPend = !isCortesia ? (parseFloat(document.getElementById('c-monto-pendiente').value) || 0) : 0;
   const data = {
-    fecha, proxima_consulta:document.getElementById('c-proxima').value,
-    motivo:document.getElementById('c-motivo').value,
-    notas:document.getElementById('c-notas').value,
-    monto, estado_pago:estadoPago,
+    fecha, proxima_consulta: document.getElementById('c-proxima').value,
+    motivo: document.getElementById('c-motivo').value,
+    notas: document.getElementById('c-notas').value,
+    monto, estado_pago: estadoPago,
     monto_pendiente: estadoPago==='parcial' ? montoPend : (estadoPago==='pendiente' ? monto : 0),
+    metodo_pago: isCortesia ? '' : (metodoEl?.value || 'efectivo'),
+    cortesia: isCortesia,
   };
   if (idx !== null) p.historial_consultas[idx] = data; else p.historial_consultas.push(data);
   savePaciente(p); closeModal();
@@ -1682,6 +1879,10 @@ async function eliminarConsulta(pacienteId, idx) {
 function openModalResultado(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   const r = idx !== null ? p.resultados[idx] : null;
+  const d = p.datos_personales;
+  // Pre-fill altura from patient data or previous record
+  const alturaDefault = r?.altura || d.altura || '';
+  const pesoDefault   = r?.peso   || '';
   openModal(`<div class="modal">
     <div class="modal-header">
       <h3>📈 ${r ? 'Editar Registro' : 'Nuevo Registro de Evolución'}</h3>
@@ -1690,12 +1891,24 @@ function openModalResultado(pacienteId, idx) {
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label>Fecha *</label><input type="date" id="r-fecha" value="${r?.fecha||new Date().toISOString().split('T')[0]}"></div>
-        <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" id="r-peso" value="${r?.peso||''}" placeholder="Ej: 65.5"></div>
-        <div class="form-group"><label>IMC</label><input type="number" step="0.1" id="r-imc" value="${r?.imc||''}" placeholder="Ej: 22.5"></div>
+        <div class="form-group">
+          <label>Peso (kg)</label>
+          <input type="number" step="0.1" id="r-peso" value="${esc(String(r?.peso||pesoDefault))}" placeholder="Ej: 65.5" oninput="calcImcModal()">
+        </div>
+        <div class="form-group">
+          <label>Altura (cm)</label>
+          <input type="number" step="1" id="r-altura" value="${esc(String(alturaDefault))}" placeholder="Ej: 165" oninput="calcImcModal()">
+        </div>
+        <div class="form-group">
+          <label>IMC <span style="font-size:10px;color:var(--gray-400)">(calculado automático)</span></label>
+          <input type="number" step="0.1" id="r-imc" value="${esc(String(r?.imc||''))}" placeholder="Auto" style="background:var(--surface-container-low)" readonly>
+        </div>
         <div class="form-group"><label>Tensión arterial</label><input type="text" id="r-tension" value="${esc(r?.tension||'')}" placeholder="Ej: 120/80"></div>
         <div class="form-group"><label>Glucemia (mg/dL)</label><input type="text" id="r-glucemia" value="${esc(r?.glucemia||'')}" placeholder="Ej: 95"></div>
       </div>
-      <div class="form-group" style="margin-top:12px"><label>Resultados de laboratorio</label><textarea id="r-laboratorios" rows="2" placeholder="HbA1c, IGF-1, perfil lipídico, hemograma...">${esc(r?.laboratorios||'')}</textarea></div>
+      <!-- IMC preview -->
+      <div id="imc-preview" style="margin:8px 0 4px;min-height:24px"></div>
+      <div class="form-group" style="margin-top:8px"><label>Resultados de laboratorio</label><textarea id="r-laboratorios" rows="2" placeholder="HbA1c, IGF-1, perfil lipídico, hemograma...">${esc(r?.laboratorios||'')}</textarea></div>
       <div class="form-group" style="margin-top:12px"><label>Observaciones / Evolución</label><textarea id="r-observaciones" rows="3" placeholder="Cómo responde el paciente, cambios subjetivos, efectos adversos...">${esc(r?.observaciones||'')}</textarea></div>
     </div>
     <div class="modal-footer">
@@ -1703,16 +1916,41 @@ function openModalResultado(pacienteId, idx) {
       <button class="btn btn-primary" onclick="guardarResultado('${pacienteId}',${idx})">💾 Guardar</button>
     </div>
   </div>`);
+  setTimeout(calcImcModal, 60);
+}
+
+function calcImcModal() {
+  const peso = parseFloat(document.getElementById('r-peso')?.value);
+  const alt  = parseFloat(document.getElementById('r-altura')?.value);
+  const imcEl = document.getElementById('r-imc');
+  const prev  = document.getElementById('imc-preview');
+  if (peso && alt && alt > 0 && imcEl) {
+    const imc = +(peso / Math.pow(alt/100, 2)).toFixed(1);
+    imcEl.value = imc;
+    const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
+    if (prev) prev.innerHTML = `<span style="font-weight:700;font-size:15px;color:${cat.c}">${imc}</span> <span style="font-size:12px;color:${cat.c}">${cat.l}</span>`;
+  } else if (imcEl) {
+    imcEl.value = '';
+    if (prev) prev.innerHTML = '';
+  }
 }
 
 function guardarResultado(pacienteId, idx) {
   const fecha = document.getElementById('r-fecha').value;
   if (!fecha) { showToast('Ingresá la fecha', 'error'); return; }
   const p = getPaciente(pacienteId);
+  const peso = document.getElementById('r-peso').value;
+  const altura = document.getElementById('r-altura').value;
+  // Auto-update patient altura if provided
+  if (altura && !p.datos_personales.altura) {
+    p.datos_personales.altura = altura;
+  }
   const data = {
-    fecha, peso:document.getElementById('r-peso').value, imc:document.getElementById('r-imc').value,
-    tension:document.getElementById('r-tension').value, glucemia:document.getElementById('r-glucemia').value,
-    laboratorios:document.getElementById('r-laboratorios').value, observaciones:document.getElementById('r-observaciones').value,
+    fecha, peso, altura, imc: document.getElementById('r-imc').value,
+    tension: document.getElementById('r-tension').value,
+    glucemia: document.getElementById('r-glucemia').value,
+    laboratorios: document.getElementById('r-laboratorios').value,
+    observaciones: document.getElementById('r-observaciones').value,
   };
   if (idx !== null) p.resultados[idx] = data; else p.resultados.push(data);
   savePaciente(p); closeModal();
@@ -2767,13 +3005,144 @@ function setSyncLog(msg, type) {
 }
 
 // ═══════════════════════════════════════════════════
+//  TABLA DE REFERENCIA DE PÉPTIDOS
+// ═══════════════════════════════════════════════════
+const REF_KEY = 'peptidos_tabla_ref_v1';
+
+const REF_DEFAULT = [
+  { id:'r1', nombre:'Tirzepatida',    presentacion:'2.5 mg / vial',   diluyente_ml:1,   concentracion:'2.5 mg/mL',   via:'SC',  notas:'Escalar dosis. Conservar 2-8°C.' },
+  { id:'r2', nombre:'Tirzepatida',    presentacion:'5 mg / vial',     diluyente_ml:1,   concentracion:'5 mg/mL',     via:'SC',  notas:'' },
+  { id:'r3', nombre:'Tirzepatida',    presentacion:'10 mg / vial',    diluyente_ml:1,   concentracion:'10 mg/mL',    via:'SC',  notas:'' },
+  { id:'r4', nombre:'Retatrutide',    presentacion:'10 mg / vial',    diluyente_ml:1,   concentracion:'10 mg/mL',    via:'SC',  notas:'Diluir en agua bacteriostática.' },
+  { id:'r5', nombre:'GHK-Cu (Glow)',  presentacion:'50 mg / vial',    diluyente_ml:2,   concentracion:'25 mg/mL',    via:'SC',  notas:'Proteger de la luz.' },
+  { id:'r6', nombre:'BPC-157',        presentacion:'5 mg / vial',     diluyente_ml:2,   concentracion:'2.5 mg/mL',   via:'SC/oral', notas:'Estable 30 días 2-8°C.' },
+  { id:'r7', nombre:'TB-500',         presentacion:'10 mg / vial',    diluyente_ml:2,   concentracion:'5 mg/mL',     via:'SC',  notas:'' },
+  { id:'r8', nombre:'MOTS-c',         presentacion:'10 mg / vial',    diluyente_ml:1,   concentracion:'10 mg/mL',    via:'SC/IV', notas:'Frío estricto.' },
+  { id:'r9', nombre:'DSIP',           presentacion:'5 mg / vial',     diluyente_ml:2,   concentracion:'2.5 mg/mL',   via:'SC',  notas:'Aplicar antes de dormir.' },
+  { id:'r10',nombre:'Semaglutide',    presentacion:'3 mg / vial',     diluyente_ml:1.5, concentracion:'2 mg/mL',     via:'SC',  notas:'Inyección 1x semana.' },
+  { id:'r11',nombre:'Liraglutida',    presentacion:'6 mg / vial',     diluyente_ml:1,   concentracion:'6 mg/mL',     via:'SC',  notas:'1x día.' },
+  { id:'r12',nombre:'Ipamorelin',     presentacion:'5 mg / vial',     diluyente_ml:2,   concentracion:'2.5 mg/mL',   via:'SC',  notas:'Aplicar en ayunas.' },
+  { id:'r13',nombre:'CJC-1295',       presentacion:'5 mg / vial',     diluyente_ml:2,   concentracion:'2.5 mg/mL',   via:'SC',  notas:'Combo frecuente con Ipamorelin.' },
+  { id:'r14',nombre:'Epitalon',       presentacion:'10 mg / vial',    diluyente_ml:2,   concentracion:'5 mg/mL',     via:'SC',  notas:'Ciclos de 10-20 días.' },
+];
+
+function getTablaRef() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(REF_KEY));
+    return Array.isArray(stored) ? stored : null;
+  } catch(e) { return null; }
+}
+function saveTablaRef(data) { localStorage.setItem(REF_KEY, JSON.stringify(data)); }
+function getRefData() {
+  const stored = getTablaRef();
+  if (!stored) { saveTablaRef(REF_DEFAULT); return REF_DEFAULT; }
+  return stored;
+}
+
+function renderReferencia(el) {
+  const data = getRefData();
+  document.getElementById('topbar-actions').innerHTML = '';
+  el.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+      <button class="btn btn-primary" onclick="openModalRef(null)">➕ Agregar Péptido</button>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="ref-wrap">
+        <table class="ref-table">
+          <thead><tr>
+            <th>Nombre</th>
+            <th>Presentación</th>
+            <th>Diluyente (mL)</th>
+            <th>Concentración</th>
+            <th>Vía</th>
+            <th style="white-space:normal;min-width:140px">Notas</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            ${data.length ? data.map((item, i) => `
+              <tr>
+                <td><strong>${esc(item.nombre)}</strong></td>
+                <td>${esc(item.presentacion)}</td>
+                <td style="text-align:center">${item.diluyente_ml} mL</td>
+                <td><span class="badge badge-blue">${esc(item.concentracion)}</span></td>
+                <td><span class="badge badge-gray">${esc(item.via)}</span></td>
+                <td style="font-size:12px;color:var(--on-surface-variant)">${item.notas ? esc(item.notas) : '—'}</td>
+                <td>
+                  <div style="display:flex;gap:4px">
+                    <button class="btn btn-outline btn-sm" onclick="openModalRef(${i})">✏️</button>
+                    <button class="btn btn-outline btn-sm" onclick="eliminarRef(${i})">🗑️</button>
+                  </div>
+                </td>
+              </tr>`).join('') : `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--gray-400)">Sin péptidos. Agregá el primero.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:10px 16px;font-size:11.5px;color:var(--on-surface-variant);border-top:1px solid var(--outline-variant)">${data.length} péptido(s) · Editá cualquier fila con ✏️ · Los cambios se guardan en este dispositivo</div>
+    </div>`;
+}
+
+function openModalRef(idx) {
+  const data = getRefData();
+  const item = idx !== null ? data[idx] : null;
+  openModal(`<div class="modal">
+    <div class="modal-header">
+      <h3>🔬 ${item ? 'Editar' : 'Agregar'} Péptido</h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Nombre *</label><input type="text" id="ref-nombre" value="${esc(item?.nombre||'')}" placeholder="Ej: BPC-157"></div>
+        <div class="form-group"><label>Presentación</label><input type="text" id="ref-presentacion" value="${esc(item?.presentacion||'')}" placeholder="Ej: 5 mg / vial"></div>
+        <div class="form-group"><label>Diluyente (mL)</label><input type="number" step="0.5" id="ref-diluyente" value="${item?.diluyente_ml||''}" placeholder="Ej: 2"></div>
+        <div class="form-group"><label>Concentración resultante</label><input type="text" id="ref-concentracion" value="${esc(item?.concentracion||'')}" placeholder="Ej: 2.5 mg/mL"></div>
+        <div class="form-group"><label>Vía de administración</label><input type="text" id="ref-via" value="${esc(item?.via||'')}" placeholder="Ej: SC, IM, Oral"></div>
+      </div>
+      <div class="form-group" style="margin-top:10px"><label>Notas / Recomendaciones</label><textarea id="ref-notas" rows="2" placeholder="Conservación, frecuencia, advertencias...">${esc(item?.notas||'')}</textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarRef(${idx})">💾 Guardar</button>
+    </div>
+  </div>`);
+}
+
+function guardarRef(idx) {
+  const nombre = document.getElementById('ref-nombre').value.trim();
+  if (!nombre) { showToast('Ingresá el nombre del péptido', 'error'); return; }
+  const data = getRefData();
+  const item = {
+    id: idx !== null ? data[idx].id : 'r' + Date.now(),
+    nombre,
+    presentacion: document.getElementById('ref-presentacion').value,
+    diluyente_ml: parseFloat(document.getElementById('ref-diluyente').value) || 0,
+    concentracion: document.getElementById('ref-concentracion').value,
+    via: document.getElementById('ref-via').value,
+    notas: document.getElementById('ref-notas').value,
+  };
+  if (idx !== null) data[idx] = item; else data.push(item);
+  saveTablaRef(data); closeModal();
+  showToast('✅ Péptido guardado', 'success');
+  renderReferencia(document.getElementById('content'));
+}
+
+async function eliminarRef(idx) {
+  const ok = await customConfirm('Eliminar péptido', '¿Eliminar esta entrada de la tabla?', true);
+  if (!ok) return;
+  const data = getRefData();
+  data.splice(idx, 1);
+  saveTablaRef(data);
+  renderReferencia(document.getElementById('content'));
+  showToast('Eliminado');
+}
+
+// ═══════════════════════════════════════════════════
 //  MOBILE PWA
 // ═══════════════════════════════════════════════════
 function updateBottomNav(page) {
   ['bn-dashboard','bn-pacientes','bn-nuevo','bn-finanzas','bn-mas'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('active'); });
   const map={dashboard:'bn-dashboard',pacientes:'bn-pacientes',nuevo:'bn-nuevo',finanzas:'bn-finanzas'};
   const id=map[page]; if(id){const el=document.getElementById(id);if(el)el.classList.add('active');}
-  if (['asistente','proveedor','importar','sync'].includes(page)){const m=document.getElementById('bn-mas');if(m)m.classList.add('active');}
+  if (['asistente','proveedor','importar','sync','referencia'].includes(page)){const m=document.getElementById('bn-mas');if(m)m.classList.add('active');}
 }
 function openMoreDrawer() { document.getElementById('more-drawer').classList.add('open'); document.getElementById('more-drawer-overlay').style.display='block'; document.body.style.overflow='hidden'; }
 function closeMoreDrawer() { const d=document.getElementById('more-drawer'); if(d) d.classList.remove('open'); const o=document.getElementById('more-drawer-overlay'); if(o) o.style.display='none'; document.body.style.overflow=''; }
