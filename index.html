@@ -932,7 +932,7 @@ select { background: var(--white); cursor: pointer; }
   <div id="topbar">
     <h2 id="page-title">Dashboard</h2>
     <div class="topbar-right">
-      <div id="sync-status" class="sync-pill sync-none" onclick="navigate('sync')" title="Estado de sincronización">
+      <div id="sync-status" class="sync-pill sync-none" onclick="_autoPullOnOpen(true)" title="Click para actualizar datos desde la nube">
         <span class="sync-icon">☁️</span>
         <span class="sync-text">Configurar sync</span>
       </div>
@@ -2810,14 +2810,19 @@ async function _autoPushSilent() {
     localStorage.setItem(SYNC_GIST_KEY, result.id);
     localStorage.setItem(SYNC_LAST_KEY, new Date().toISOString());
     _updateSyncStatus('ok');
-  } catch(e) { _updateSyncStatus('error', e.message); }
+  } catch(e) { _updateSyncStatus('error', e.message?.slice(0,40)||'Error'); }
 }
 
-// — Auto-pull on open —
-async function _autoPullOnOpen() {
+// — Auto-pull (con timestamp comparison) —
+// force=true: ignora el rate-limit de 60s y descarga siempre
+async function _autoPullOnOpen(force = false) {
   const token = getSyncToken(); if (!token) return;
   const last = getSyncLast();
-  if (last) { const mins = (Date.now() - new Date(last).getTime()) / 60000; if (mins < 3) { _updateSyncStatus('ok'); return; } }
+  // Rate-limit: no más de una consulta por minuto (a menos que sea forzado)
+  if (!force && last) {
+    const secs = (Date.now() - new Date(last).getTime()) / 1000;
+    if (secs < 60) { _updateSyncStatus('ok'); return; }
+  }
   _updateSyncStatus('syncing');
   try {
     let gistId = getSyncGistId();
@@ -2828,21 +2833,30 @@ async function _autoPullOnOpen() {
     const rawRes = await fetch(rawUrl); if (!rawRes.ok) throw new Error('Error al descargar');
     const data = JSON.parse(await rawRes.text());
     if (!data.pacientes||!Array.isArray(data.pacientes)) throw new Error('Formato inválido');
-    // Write directly to avoid triggering auto-push loop
-    localStorage.setItem(DB_KEY, JSON.stringify(data.pacientes));
-    localStorage.setItem('peptidos_compras_v1', JSON.stringify(data.compras||[]));
-    localStorage.setItem(SYNC_LAST_KEY, new Date().toISOString());
-    _updateSyncStatus('ok');
-    showToast('☁️ Datos actualizados desde la nube', 'success');
-    navigate(currentPage, currentPacienteId);
-  } catch(e) {
-    // Si ya hay datos locales no mostramos error rojo — la app funciona igual
-    if (getDB().length > 0) {
+    // Aplicar solo si la nube tiene datos más nuevos que lo que tenemos
+    const remoteTs = data.timestamp ? new Date(data.timestamp).getTime() : 0;
+    const localTs  = last ? new Date(last).getTime() : 0;
+    if (remoteTs > localTs) {
+      localStorage.setItem(DB_KEY, JSON.stringify(data.pacientes));
+      localStorage.setItem('peptidos_compras_v1', JSON.stringify(data.compras||[]));
+      localStorage.setItem(SYNC_LAST_KEY, new Date().toISOString());
       _updateSyncStatus('ok');
+      showToast('☁️ Datos actualizados desde la nube', 'success');
+      navigate(currentPage, currentPacienteId);
     } else {
-      _updateSyncStatus('error', e.message);
+      localStorage.setItem(SYNC_LAST_KEY, new Date().toISOString());
+      _updateSyncStatus('ok');
     }
+  } catch(e) {
+    _updateSyncStatus('error', e.message?.slice(0,40)||'Error de conexión');
   }
+}
+
+// — Polling: revisa la nube cada 5 minutos mientras la app está abierta —
+let _syncPollTimer = null;
+function _startSyncPolling() {
+  if (_syncPollTimer) return;
+  _syncPollTimer = setInterval(() => { if (getSyncToken()) _autoPullOnOpen(); }, 5 * 60 * 1000);
 }
 
 // — Sync helpers —
@@ -3154,8 +3168,9 @@ function closeMoreDrawer() { const d=document.getElementById('more-drawer'); if(
 navigate('dashboard');
 
 if (getSyncToken()) {
-  _updateSyncStatus('ok');
+  _updateSyncStatus('syncing');
   setTimeout(_autoPullOnOpen, 1200);
+  _startSyncPolling();
 } else {
   _updateSyncStatus('none');
 }
