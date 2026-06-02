@@ -1501,20 +1501,30 @@ function renderTabDatos(p) {
 
 function renderTabPeptidos(p) {
   const prots = p.protocolo_peptidos || [];
+  const estadoBadge = {
+    activo:     {cls:'badge-green',  label:'Activo'},
+    suspendido: {cls:'badge-yellow', label:'⏸ Suspendido'},
+    finalizado: {cls:'badge-gray',   label:'Finalizado'},
+  };
   return `
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px">
       <button class="btn btn-outline btn-sm" onclick="openCopiarProtocolo('${p.id}')" title="Copiar protocolo de otro paciente">📋 Copiar de otro paciente</button>
       <button class="btn btn-primary" onclick="openModalPeptido('${p.id}',null)">➕ Agregar Péptido</button>
     </div>
     ${!prots.length ? `<div class="empty"><div class="icon">💉</div><h3>Sin protocolo cargado</h3><p>Agregá el primer péptido del protocolo</p></div>` : ''}
-    ${prots.map((prot,i) => `
-      <div class="protocol-item">
+    ${prots.map((prot,i) => {
+      const est = getPeptidoEstado(prot);
+      const eb  = estadoBadge[est] || estadoBadge.finalizado;
+      return `
+      <div class="protocol-item" style="${est==='suspendido'?'opacity:0.8;border-left:3px solid #f59e0b':''}">
         <div class="protocol-item-header">
-          <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span style="font-size:14px;font-weight:700">${esc(prot.peptido)}</span>
-            <span class="badge ${prot.activo ? 'badge-green' : 'badge-gray'}">${prot.activo ? 'Activo' : 'Finalizado'}</span>
+            <span class="badge ${eb.cls}">${eb.label}</span>
           </div>
-          <div style="display:flex;gap:5px">
+          <div style="display:flex;gap:5px;flex-shrink:0">
+            ${est==='activo' ? `<button class="btn btn-outline btn-sm" style="color:#b45309;border-color:#fcd34d" onclick="suspenderPeptido('${p.id}',${i})" title="Suspender tratamiento">⏸</button>` : ''}
+            ${est==='suspendido' ? `<button class="btn btn-outline btn-sm" style="color:#059669;border-color:#6ee7b7" onclick="reactivarPeptido('${p.id}',${i})" title="Reactivar">▶</button>` : ''}
             <button class="btn btn-outline btn-sm" onclick="openModalPeptido('${p.id}',${i})">✏️</button>
             <button class="btn btn-outline btn-sm" onclick="eliminarPeptido('${p.id}',${i})">🗑️</button>
           </div>
@@ -1525,10 +1535,12 @@ function renderTabPeptidos(p) {
           <div class="protocol-field"><label>Vía de admin.</label><p>${esc(prot.via||'—')}</p></div>
           <div class="protocol-field"><label>Objetivo</label><p>${esc(prot.objetivo||'—')}</p></div>
           <div class="protocol-field"><label>Fecha inicio</label><p>${formatDate(prot.fecha_inicio)}</p></div>
-          <div class="protocol-field"><label>Fecha fin</label><p>${prot.fecha_fin ? formatDate(prot.fecha_fin) : '—'}</p></div>
+          <div class="protocol-field"><label>${est==='suspendido'?'Fecha suspensión':'Fecha fin'}</label><p>${prot.fecha_fin ? formatDate(prot.fecha_fin) : '—'}</p></div>
         </div>
+        ${est==='suspendido' && prot.motivo_suspension ? `<div style="margin-top:8px;font-size:12.5px;background:#fef3c7;color:#92400e;padding:8px 10px;border-radius:6px;border-left:3px solid #f59e0b">⏸ Motivo: ${esc(prot.motivo_suspension)}</div>` : ''}
         ${prot.notas ? `<div style="margin-top:8px;font-size:12.5px;color:var(--gray-600);background:var(--gray-50);padding:8px 10px;border-radius:6px">📝 ${esc(prot.notas)}</div>` : ''}
-      </div>`).join('')}`;
+      </div>`;
+    }).join('')}`;
 }
 
 function renderTabConsultas(p) {
@@ -2036,6 +2048,12 @@ function confirmarCopiarProtocolo(destId) {
 }
 
 // — Modal Péptido —
+function toggleMotivoSusp() {
+  const v = document.getElementById('m-activo')?.value;
+  const row = document.getElementById('motivo-susp-row');
+  if (row) row.style.display = v === 'suspendido' ? '' : 'none';
+}
+
 function openModalPeptido(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   const prot = idx !== null ? p.protocolo_peptidos[idx] : null;
@@ -2076,11 +2094,16 @@ function openModalPeptido(pacienteId, idx) {
         <div class="form-group"><label>Fecha de inicio</label><input type="date" id="m-fecha-inicio" value="${prot?.fecha_inicio||''}"></div>
         <div class="form-group"><label>Fecha de fin (opcional)</label><input type="date" id="m-fecha-fin" value="${prot?.fecha_fin||''}"></div>
         <div class="form-group"><label>Estado</label>
-          <select id="m-activo">
-            <option value="true"  ${(prot===null||prot?.activo)?'selected':''}>Activo</option>
-            <option value="false" ${prot?.activo===false?'selected':''}>Finalizado</option>
+          <select id="m-activo" onchange="toggleMotivoSusp()">
+            <option value="activo"     ${(prot===null||getPeptidoEstado(prot||{})==='activo')?'selected':''}>Activo</option>
+            <option value="suspendido" ${getPeptidoEstado(prot||{})==='suspendido'?'selected':''}>⏸ Suspendido</option>
+            <option value="finalizado" ${getPeptidoEstado(prot||{})==='finalizado'?'selected':''}>Finalizado</option>
           </select>
         </div>
+      </div>
+      <div id="motivo-susp-row" class="form-group" style="margin-top:8px;${getPeptidoEstado(prot||{})!=='suspendido'?'display:none':''}">
+        <label>Motivo de suspensión</label>
+        <input type="text" id="m-motivo-susp" value="${esc(prot?.motivo_suspension||'')}" placeholder="Ej: efectos secundarios, costo, decisión del paciente...">
       </div>
       <div class="form-group" style="margin-top:12px">
         <label>Notas adicionales</label>
@@ -2108,7 +2131,9 @@ function guardarPeptido(pacienteId, idx) {
     objetivo:document.getElementById('m-objetivo').value,
     fecha_inicio:document.getElementById('m-fecha-inicio').value,
     fecha_fin:document.getElementById('m-fecha-fin').value,
-    activo:document.getElementById('m-activo').value === 'true',
+    estado:document.getElementById('m-activo').value,
+    activo:document.getElementById('m-activo').value === 'activo',
+    motivo_suspension:document.getElementById('m-motivo-susp')?.value||'',
     notas:document.getElementById('m-notas').value,
   };
   if (idx !== null) p.protocolo_peptidos[idx] = data; else p.protocolo_peptidos.push(data);
@@ -2123,6 +2148,68 @@ async function eliminarPeptido(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   p.protocolo_peptidos.splice(idx, 1);
   savePaciente(p); showToast('Péptido eliminado');
+  profileTab = 'peptidos'; navigate('perfil', pacienteId);
+}
+
+function getPeptidoEstado(prot) {
+  if (prot.estado) return prot.estado;
+  return prot.activo ? 'activo' : 'finalizado';
+}
+
+async function suspenderPeptido(pacienteId, idx) {
+  const p = getPaciente(pacienteId);
+  const prot = p.protocolo_peptidos[idx];
+  openModal(`<div class="modal">
+    <div class="modal-header">
+      <h3>⏸ Suspender — ${esc(prot.peptido)}</h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Motivo de suspensión</label>
+        <input type="text" id="susp-motivo" placeholder="Ej: efectos secundarios, costo, decisión del paciente..." style="width:100%">
+      </div>
+      <div class="form-group">
+        <label>Fecha de suspensión</label>
+        <input type="date" id="susp-fecha" value="${new Date().toISOString().split('T')[0]}">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarSuspension('${pacienteId}',${idx})">⏸ Confirmar suspensión</button>
+    </div>
+  </div>`);
+}
+
+function confirmarSuspension(pacienteId, idx) {
+  const motivo = document.getElementById('susp-motivo').value.trim();
+  const fecha  = document.getElementById('susp-fecha').value;
+  const p = getPaciente(pacienteId);
+  p.protocolo_peptidos[idx] = {
+    ...p.protocolo_peptidos[idx],
+    estado: 'suspendido',
+    activo: false,
+    fecha_fin: fecha,
+    motivo_suspension: motivo,
+  };
+  savePaciente(p); closeModal();
+  showToast('⏸ Tratamiento suspendido', 'success');
+  profileTab = 'peptidos'; navigate('perfil', pacienteId);
+}
+
+async function reactivarPeptido(pacienteId, idx) {
+  const p = getPaciente(pacienteId);
+  p.protocolo_peptidos[idx] = {
+    ...p.protocolo_peptidos[idx],
+    estado: 'activo',
+    activo: true,
+    fecha_fin: '',
+    motivo_suspension: '',
+  };
+  savePaciente(p);
+  showToast('✅ Péptido reactivado', 'success');
+  profileTab = 'peptidos'; navigate('perfil', pacienteId);
+}
   navigate('perfil', pacienteId);
 }
 
