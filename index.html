@@ -3346,7 +3346,7 @@ function renderReferencia(el) {
         <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#e0f2fe,#bae6fd);display:inline-flex;align-items:center;justify-content:center;font-size:14px">🧮</span>
         Calculadora de Reconstitución
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:flex-end">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:flex-end">
         <div class="form-group" style="margin-bottom:0">
           <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">mg por frasco</label>
           <input type="number" id="calc-mg" step="0.5" min="0" placeholder="Ej: 10" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
@@ -3354,10 +3354,6 @@ function renderReferencia(el) {
         <div class="form-group" style="margin-bottom:0">
           <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">Dosis por frasco</label>
           <input type="number" id="calc-dosis" step="1" min="1" placeholder="Ej: 4" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">mL de diluyente</label>
-          <input type="number" id="calc-dil" step="0.5" min="0" placeholder="Ej: 1" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
         </div>
       </div>
       <div id="calc-result" style="margin-top:12px"></div>
@@ -3377,7 +3373,7 @@ function renderReferencia(el) {
           </tr></thead>
           <tbody>
             ${data.length ? data.map((item, i) => `
-              <tr style="cursor:pointer" onclick="document.getElementById('calc-mg').value='${parseFloat(item.presentacion)||''}';document.getElementById('calc-dil').value='${item.diluyente_ml||''}';calcReconstitucion();document.getElementById('calc-mg').scrollIntoView({behavior:'smooth',block:'center'})">
+              <tr style="cursor:pointer" onclick="document.getElementById('calc-mg').value='${parseFloat(item.presentacion)||''}';calcReconstitucion();document.getElementById('calc-mg').scrollIntoView({behavior:'smooth',block:'center'})">
                 <td><strong>${esc(item.nombre)}</strong></td>
                 <td>${esc(item.presentacion)}</td>
                 <td style="text-align:center">${item.diluyente_ml} mL</td>
@@ -3401,18 +3397,29 @@ function renderReferencia(el) {
 function calcReconstitucion() {
   const mg    = parseFloat(document.getElementById('calc-mg')?.value) || 0;
   const dosis = parseFloat(document.getElementById('calc-dosis')?.value) || 0;
-  const dil   = parseFloat(document.getElementById('calc-dil')?.value) || 0;
   const res   = document.getElementById('calc-result');
   if (!res) return;
-  if (!mg || !dosis || !dil) {
-    res.innerHTML = `<div style="padding:10px 14px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:12.5px;color:var(--gray-400);text-align:center">Completá los 3 campos para calcular</div>`;
+  if (!mg || !dosis) {
+    res.innerHTML = `<div style="padding:10px 14px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:12.5px;color:var(--gray-400);text-align:center">Completá los 2 campos para calcular</div>`;
     return;
   }
+  function recommendedWater(d) {
+    const steps = [0.5,1.0,1.5,2.0,2.5,3.0,4.0,5.0];
+    for (const w of steps) { const u=(w/d)*100; if(u>=20 && Math.abs(u-Math.round(u))<0.001) return w; }
+    for (const w of steps) { const u=(w/d)*100; if(u>=10 && Math.abs(u-Math.round(u))<0.001) return w; }
+    return Math.max(0.5, +(Math.round(d*0.25/0.5)*0.5).toFixed(1));
+  }
+  const dil          = recommendedWater(dosis);
   const mgPorDosis   = +(mg / dosis).toFixed(3);
   const mlPorDosis   = +(dil / dosis).toFixed(3);
   const concentracion = +(mg / dil).toFixed(2);
   const unidades     = Math.round(mlPorDosis * 100);
   res.innerHTML = `
+    <div style="margin-bottom:10px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1.5px solid #7dd3fc;border-radius:var(--radius-sm);padding:16px;text-align:center">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0369a1;margin-bottom:6px">💧 Agregar agua bacteriostática</div>
+      <div style="font-size:36px;font-weight:900;color:#0c4a6e;line-height:1">${dil} mL</div>
+      <div style="font-size:12px;color:#0369a1;margin-top:4px">en el frasco de ${mg} mg · ${dosis} dosis</div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:var(--radius-sm);padding:14px;text-align:center">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#3b82f6;margin-bottom:4px">mg por dosis</div>
