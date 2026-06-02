@@ -1653,53 +1653,167 @@ function initImcGauges() {
   });
 }
 
+function _fmtShort(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const dt = new Date(dateStr + 'T12:00:00');
+    return dt.toLocaleDateString('es-AR', { day:'2-digit', month:'short' }).replace('.','');
+  } catch { return dateStr; }
+}
+
+function _buildTrendChart(pts, color, gradId, unit) {
+  if (pts.length < 2) return '';
+  const W=340, H=110, PL=38, PR=8, PT=18, PB=22;
+  const cW=W-PL-PR, cH=H-PT-PB;
+  const vals = pts.map(p=>p.v);
+  const minV = Math.min(...vals), maxV = Math.max(...vals);
+  const range = (maxV - minV) || 1;
+  const coords = pts.map((p,i) => {
+    const x = PL + (pts.length===1 ? cW/2 : (i/(pts.length-1))*cW);
+    const y = PT + (1-(p.v-minV)/range)*cH;
+    return { x, y, v:p.v, label:p.label };
+  });
+  const linePath = coords.map((c,i)=>`${i===0?'M':'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  const areaPath = linePath + ` L${coords[coords.length-1].x.toFixed(1)},${(PT+cH).toFixed(1)} L${coords[0].x.toFixed(1)},${(PT+cH).toFixed(1)} Z`;
+  const dotsSvg = coords.map(c=>`
+    <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4" fill="${color}" stroke="white" stroke-width="2"/>
+    <text x="${c.x.toFixed(1)}" y="${(c.y-9).toFixed(1)}" text-anchor="middle" font-size="9" fill="${color}" font-weight="700">${c.v}</text>
+  `).join('');
+  const lblFirst = `<text x="${coords[0].x.toFixed(1)}" y="${(PT+cH+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="#9ca3af">${coords[0].label}</text>`;
+  const lblLast  = coords.length>1 ? `<text x="${coords[coords.length-1].x.toFixed(1)}" y="${(PT+cH+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="#9ca3af">${coords[coords.length-1].label}</text>` : '';
+  const lblMid   = coords.length>2 ? `<text x="${coords[Math.floor(coords.length/2)].x.toFixed(1)}" y="${(PT+cH+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="#9ca3af">${coords[Math.floor(coords.length/2)].label}</text>` : '';
+  const yTop = `<text x="${PL-3}" y="${(PT+5).toFixed(1)}" text-anchor="end" font-size="8" fill="#9ca3af">${maxV.toFixed(1)}</text>`;
+  const yBot = `<text x="${PL-3}" y="${(PT+cH).toFixed(1)}" text-anchor="end" font-size="8" fill="#9ca3af">${minV.toFixed(1)}</text>`;
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible;display:block">
+    <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+cH}" stroke="#e5e7eb" stroke-width="1"/>
+    <line x1="${PL}" y1="${PT+cH}" x2="${W-PR}" y2="${PT+cH}" stroke="#e5e7eb" stroke-width="1"/>
+    ${yTop}${yBot}
+    <path d="${areaPath}" fill="url(#${gradId})"/>
+    <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dotsSvg}
+    ${lblFirst}${lblLast}${lblMid}
+  </svg>`;
+}
+
 function renderTabResultados(p) {
   const res = p.resultados || [];
-  const sorted = [...res].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+  // Chronological order for charts; newest-first for list
+  const chronoAsc  = [...res].filter(r=>r.peso).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const imcAsc     = [...res].filter(r=>r.peso&&r.altura).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const sortedDesc = [...res].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
   const d = p.datos_personales;
 
-  // Usar el registro más reciente para el gauge
-  const last = sorted[0];
+  const last   = sortedDesc[0];
   const pesoVal = parseFloat(last?.peso || d.peso || 0);
   const altVal  = parseFloat(last?.altura || d.altura || 0);
-  const imcVal  = (pesoVal && altVal) ? parseFloat((pesoVal / Math.pow(altVal/100, 2)).toFixed(1)) : null;
+  const imcVal  = (pesoVal && altVal) ? parseFloat((pesoVal/Math.pow(altVal/100,2)).toFixed(1)) : null;
 
+  // ── IMC gauge ──
   const gaugeHtml = imcVal ? `
     <div class="imc-gauge-card">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant);margin-bottom:10px">📊 Estado Actual · ${pesoVal} kg · ${altVal} cm</div>
-      <div class="imc-gauge-row">
-        ${buildImcGauge(imcVal, pesoVal, altVal, d.sexo)}
-      </div>
+      <div class="imc-gauge-row">${buildImcGauge(imcVal, pesoVal, altVal, d.sexo)}</div>
     </div>` : '';
+
+  // ── Weight chart ──
+  let pesoChartHtml = '';
+  if (chronoAsc.length >= 2) {
+    const ptsPeso = chronoAsc.map(r=>({ v: parseFloat(parseFloat(r.peso).toFixed(1)), label: _fmtShort(r.fecha) }));
+    const first = ptsPeso[0].v, curr = ptsPeso[ptsPeso.length-1].v;
+    const diff = +(curr - first).toFixed(1);
+    const diffColor = diff < 0 ? '#059669' : diff > 0 ? '#dc2626' : '#6b7280';
+    const diffSign  = diff > 0 ? '+' : '';
+    pesoChartHtml = `
+      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#3b82f6;margin-bottom:8px">⚖️ Historial de Peso</div>
+        ${_buildTrendChart(ptsPeso,'#3b82f6','gradPeso','kg')}
+        <div style="font-size:11px;color:var(--gray-500);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
+          <span>Inicio: <strong style="color:var(--gray-700)">${first} kg</strong></span>
+          <span>Actual: <strong style="color:#3b82f6">${curr} kg</strong></span>
+          <span>Cambio: <strong style="color:${diffColor}">${diffSign}${diff} kg</strong></span>
+          <span>Registros: <strong>${ptsPeso.length}</strong></span>
+        </div>
+      </div>`;
+  }
+
+  // ── IMC chart ──
+  let imcChartHtml = '';
+  if (imcAsc.length >= 2) {
+    const ptsImc = imcAsc.map(r=>{
+      const imc = r.imc || parseFloat((parseFloat(r.peso)/Math.pow(parseFloat(r.altura)/100,2)).toFixed(1));
+      return { v: imc, label: _fmtShort(r.fecha) };
+    });
+    const firstImc = ptsImc[0].v, currImc = ptsImc[ptsImc.length-1].v;
+    const diffImc = +(currImc - firstImc).toFixed(1);
+    const diffImcColor = diffImc < 0 ? '#059669' : diffImc > 0 ? '#dc2626' : '#6b7280';
+    const diffImcSign  = diffImc > 0 ? '+' : '';
+    const imcCat = currImc<18.5?{l:'Bajo peso',c:'#2563eb'}:currImc<25?{l:'Normal',c:'#059669'}:currImc<30?{l:'Sobrepeso',c:'#d97706'}:currImc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
+    imcChartHtml = `
+      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8b5cf6;margin-bottom:8px">📉 Historial de IMC</div>
+        ${_buildTrendChart(ptsImc,'#8b5cf6','gradImc','')}
+        <div style="font-size:11px;color:var(--gray-500);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
+          <span>Inicio: <strong style="color:var(--gray-700)">${firstImc}</strong></span>
+          <span>Actual: <strong style="color:${imcCat.c}">${currImc} — ${imcCat.l}</strong></span>
+          <span>Cambio: <strong style="color:${diffImcColor}">${diffImcSign}${diffImc}</strong></span>
+        </div>
+      </div>`;
+  }
+
+  // ── List with trend deltas ──
+  const listHtml = sortedDesc.map((r, listIdx) => {
+    const origI = res.indexOf(r);
+    const rImc = r.imc || (r.peso && r.altura ? parseFloat((parseFloat(r.peso)/Math.pow(parseFloat(r.altura)/100,2)).toFixed(1)) : null);
+    // Find previous record (next in desc list = older)
+    const prevR = sortedDesc[listIdx + 1];
+    let deltaPeso = '', deltaImc = '';
+    if (prevR && r.peso && prevR.peso) {
+      const diff = +(parseFloat(r.peso) - parseFloat(prevR.peso)).toFixed(1);
+      const arrow = diff < 0 ? '↓' : diff > 0 ? '↑' : '→';
+      const col   = diff < 0 ? '#059669' : diff > 0 ? '#dc2626' : '#6b7280';
+      deltaPeso = `<span style="font-size:11px;font-weight:700;color:${col};margin-left:4px">${arrow} ${diff>0?'+':''}${diff} kg</span>`;
+    }
+    if (prevR && rImc) {
+      const prevImc = prevR.imc || (prevR.peso && prevR.altura ? parseFloat((parseFloat(prevR.peso)/Math.pow(parseFloat(prevR.altura)/100,2)).toFixed(1)) : null);
+      if (prevImc) {
+        const dI = +(rImc - prevImc).toFixed(1);
+        const col = dI < 0 ? '#059669' : dI > 0 ? '#dc2626' : '#6b7280';
+        deltaImc = `<span style="font-size:10px;color:${col};margin-left:3px">(${dI>0?'+':''}${dI})</span>`;
+      }
+    }
+    return `<div class="resultado-item">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:700;color:var(--primary)">📅 ${formatDate(r.fecha)}</div>
+        <div style="display:flex;gap:5px">
+          <button class="btn btn-outline btn-sm" onclick="openModalResultado('${p.id}',${origI})">✏️</button>
+          <button class="btn btn-outline btn-sm" onclick="eliminarResultado('${p.id}',${origI})">🗑️</button>
+        </div>
+      </div>
+      <div class="resultado-grid">
+        ${r.peso   ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} kg${deltaPeso}</div></div>` : ''}
+        ${r.altura ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${r.altura} cm</div></div>` : ''}
+        ${rImc     ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}${deltaImc}</div></div>` : ''}
+        ${r.tension  ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Tensión</div><div style="font-weight:600">${r.tension}</div></div>` : ''}
+        ${r.glucemia ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Glucemia</div><div style="font-weight:600">${r.glucemia}</div></div>` : ''}
+      </div>
+      ${r.laboratorios  ? `<div style="margin-top:8px;font-size:12.5px"><strong>🧪 Laboratorios:</strong> ${esc(r.laboratorios)}</div>` : ''}
+      ${r.observaciones ? `<div style="margin-top:6px;font-size:12.5px;color:var(--gray-500)">${esc(r.observaciones)}</div>` : ''}
+    </div>`;
+  }).join('');
 
   return `
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
       <button class="btn btn-primary" onclick="openModalResultado('${p.id}',null)">➕ Nuevo Registro</button>
     </div>
     ${gaugeHtml}
-    ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Registrá el peso, laboratorios y observaciones</p></div>` : ''}
-    ${sorted.map(r => {
-      const origI = res.indexOf(r);
-      const rImc = r.imc || (r.peso && r.altura ? parseFloat((parseFloat(r.peso)/Math.pow(parseFloat(r.altura)/100,2)).toFixed(1)) : null);
-      return `<div class="resultado-item">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700;color:var(--primary)">📅 ${formatDate(r.fecha)}</div>
-          <div style="display:flex;gap:5px">
-            <button class="btn btn-outline btn-sm" onclick="openModalResultado('${p.id}',${origI})">✏️</button>
-            <button class="btn btn-outline btn-sm" onclick="eliminarResultado('${p.id}',${origI})">🗑️</button>
-          </div>
-        </div>
-        <div class="resultado-grid">
-          ${r.peso     ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} kg</div></div>` : ''}
-          ${r.altura   ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${r.altura} cm</div></div>` : ''}
-          ${rImc       ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}</div></div>` : ''}
-          ${r.tension  ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Tensión</div><div style="font-weight:600">${r.tension}</div></div>` : ''}
-          ${r.glucemia ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Glucemia</div><div style="font-weight:600">${r.glucemia}</div></div>` : ''}
-        </div>
-        ${r.laboratorios  ? `<div style="margin-top:8px;font-size:12.5px"><strong>🧪 Laboratorios:</strong> ${esc(r.laboratorios)}</div>` : ''}
-        ${r.observaciones ? `<div style="margin-top:6px;font-size:12.5px;color:var(--gray-500)">${esc(r.observaciones)}</div>` : ''}
-      </div>`;
-    }).join('')}`;
+    ${pesoChartHtml}
+    ${imcChartHtml}
+    ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Registrá el peso para ver el historial y gráficos</p></div>` : ''}
+    ${listHtml}`;
 }
 
 // ═══════════════════════════════════════════════════
