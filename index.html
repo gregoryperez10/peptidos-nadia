@@ -1753,7 +1753,7 @@ function renderTabResultados(p) {
     const diffImcSign  = diffImc > 0 ? '+' : '';
     const imcCat = currImc<18.5?{l:'Bajo peso',c:'#2563eb'}:currImc<25?{l:'Normal',c:'#059669'}:currImc<30?{l:'Sobrepeso',c:'#d97706'}:currImc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
     imcChartHtml = `
-      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:14px">
+      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:10px">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8b5cf6;margin-bottom:8px">📉 Historial de IMC</div>
         ${_buildTrendChart(ptsImc,'#8b5cf6','gradImc','')}
         <div style="font-size:11px;color:var(--gray-500);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
@@ -1764,27 +1764,63 @@ function renderTabResultados(p) {
       </div>`;
   }
 
+  // ── Grasa % chart ──
+  const grasaAsc = [...res].filter(r=>r.grasa_pct).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  let grasaChartHtml = '';
+  if (grasaAsc.length >= 2) {
+    const pts = grasaAsc.map(r=>({ v: parseFloat(parseFloat(r.grasa_pct).toFixed(1)), label: _fmtShort(r.fecha) }));
+    const first = pts[0].v, curr = pts[pts.length-1].v;
+    const diff = +(curr - first).toFixed(1);
+    const col  = diff < 0 ? '#059669' : diff > 0 ? '#dc2626' : '#6b7280';
+    grasaChartHtml = `
+      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#f97316;margin-bottom:8px">🔥 Historial % Grasa Corporal</div>
+        ${_buildTrendChart(pts,'#f97316','gradGrasa','%')}
+        <div style="font-size:11px;color:var(--gray-500);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
+          <span>Inicio: <strong style="color:var(--gray-700)">${first}%</strong></span>
+          <span>Actual: <strong style="color:#f97316">${curr}%</strong></span>
+          <span>Cambio: <strong style="color:${col}">${diff>0?'+':''}${diff}%</strong></span>
+        </div>
+      </div>`;
+  }
+
+  // ── Músculo % chart ──
+  const musculoAsc = [...res].filter(r=>r.musculo_pct).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  let musculoChartHtml = '';
+  if (musculoAsc.length >= 2) {
+    const pts = musculoAsc.map(r=>({ v: parseFloat(parseFloat(r.musculo_pct).toFixed(1)), label: _fmtShort(r.fecha) }));
+    const first = pts[0].v, curr = pts[pts.length-1].v;
+    const diff = +(curr - first).toFixed(1);
+    const col  = diff > 0 ? '#059669' : diff < 0 ? '#dc2626' : '#6b7280';
+    musculoChartHtml = `
+      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#06b6d4;margin-bottom:8px">💪 Historial % Masa Muscular</div>
+        ${_buildTrendChart(pts,'#06b6d4','gradMusculo','%')}
+        <div style="font-size:11px;color:var(--gray-500);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
+          <span>Inicio: <strong style="color:var(--gray-700)">${first}%</strong></span>
+          <span>Actual: <strong style="color:#06b6d4">${curr}%</strong></span>
+          <span>Cambio: <strong style="color:${col}">${diff>0?'+':''}${diff}%</strong></span>
+        </div>
+      </div>`;
+  }
+
   // ── List with trend deltas ──
   const listHtml = sortedDesc.map((r, listIdx) => {
     const origI = res.indexOf(r);
     const rImc = r.imc || (r.peso && r.altura ? parseFloat((parseFloat(r.peso)/Math.pow(parseFloat(r.altura)/100,2)).toFixed(1)) : null);
-    // Find previous record (next in desc list = older)
     const prevR = sortedDesc[listIdx + 1];
-    let deltaPeso = '', deltaImc = '';
-    if (prevR && r.peso && prevR.peso) {
-      const diff = +(parseFloat(r.peso) - parseFloat(prevR.peso)).toFixed(1);
-      const arrow = diff < 0 ? '↓' : diff > 0 ? '↑' : '→';
-      const col   = diff < 0 ? '#059669' : diff > 0 ? '#dc2626' : '#6b7280';
-      deltaPeso = `<span style="font-size:11px;font-weight:700;color:${col};margin-left:4px">${arrow} ${diff>0?'+':''}${diff} kg</span>`;
+    function _delta(curr, prev, unit, lowerIsBetter) {
+      if (!curr || !prev) return '';
+      const d = +(parseFloat(curr) - parseFloat(prev)).toFixed(1);
+      const better = lowerIsBetter ? d < 0 : d > 0;
+      const arrow = d < 0 ? '↓' : d > 0 ? '↑' : '→';
+      const col   = d === 0 ? '#6b7280' : better ? '#059669' : '#dc2626';
+      return `<span style="font-size:11px;font-weight:700;color:${col};margin-left:4px">${arrow} ${d>0?'+':''}${d}${unit}</span>`;
     }
-    if (prevR && rImc) {
-      const prevImc = prevR.imc || (prevR.peso && prevR.altura ? parseFloat((parseFloat(prevR.peso)/Math.pow(parseFloat(prevR.altura)/100,2)).toFixed(1)) : null);
-      if (prevImc) {
-        const dI = +(rImc - prevImc).toFixed(1);
-        const col = dI < 0 ? '#059669' : dI > 0 ? '#dc2626' : '#6b7280';
-        deltaImc = `<span style="font-size:10px;color:${col};margin-left:3px">(${dI>0?'+':''}${dI})</span>`;
-      }
-    }
+    const deltaPeso    = _delta(r.peso,      prevR?.peso,       ' kg', true);
+    const deltaImc     = _delta(rImc,         prevR ? (prevR.imc||(prevR.peso&&prevR.altura?parseFloat((parseFloat(prevR.peso)/Math.pow(parseFloat(prevR.altura)/100,2)).toFixed(1)):null)) : null, '', true);
+    const deltaGrasa   = _delta(r.grasa_pct,  prevR?.grasa_pct,  '%',  true);
+    const deltaMusculo = _delta(r.musculo_pct, prevR?.musculo_pct,'%',  false);
     return `<div class="resultado-item">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div style="font-weight:700;color:var(--primary)">📅 ${formatDate(r.fecha)}</div>
@@ -1794,11 +1830,13 @@ function renderTabResultados(p) {
         </div>
       </div>
       <div class="resultado-grid">
-        ${r.peso   ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} kg${deltaPeso}</div></div>` : ''}
-        ${r.altura ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${r.altura} cm</div></div>` : ''}
-        ${rImc     ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}${deltaImc}</div></div>` : ''}
-        ${r.tension  ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Tensión</div><div style="font-weight:600">${r.tension}</div></div>` : ''}
-        ${r.glucemia ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Glucemia</div><div style="font-weight:600">${r.glucemia}</div></div>` : ''}
+        ${r.peso        ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} kg${deltaPeso}</div></div>` : ''}
+        ${r.altura      ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${r.altura} cm</div></div>` : ''}
+        ${rImc          ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}${deltaImc}</div></div>` : ''}
+        ${r.grasa_pct   ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">% Grasa</div><div style="font-weight:800;font-size:16px;color:#f97316">${r.grasa_pct}%${deltaGrasa}</div></div>` : ''}
+        ${r.musculo_pct ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">% Músculo</div><div style="font-weight:800;font-size:16px;color:#06b6d4">${r.musculo_pct}%${deltaMusculo}</div></div>` : ''}
+        ${r.tension     ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Tensión</div><div style="font-weight:600">${r.tension}</div></div>` : ''}
+        ${r.glucemia    ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Glucemia</div><div style="font-weight:600">${r.glucemia}</div></div>` : ''}
       </div>
       ${r.laboratorios  ? `<div style="margin-top:8px;font-size:12.5px"><strong>🧪 Laboratorios:</strong> ${esc(r.laboratorios)}</div>` : ''}
       ${r.observaciones ? `<div style="margin-top:6px;font-size:12.5px;color:var(--gray-500)">${esc(r.observaciones)}</div>` : ''}
@@ -1812,7 +1850,9 @@ function renderTabResultados(p) {
     ${gaugeHtml}
     ${pesoChartHtml}
     ${imcChartHtml}
-    ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Registrá el peso para ver el historial y gráficos</p></div>` : ''}
+    ${grasaChartHtml}
+    ${musculoChartHtml}
+    ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Registrá peso, grasa y músculo para ver el historial</p></div>` : ''}
     ${listHtml}`;
 }
 
@@ -2178,6 +2218,14 @@ function openModalResultado(pacienteId, idx) {
         </div>
         <div class="form-group"><label>Tensión arterial</label><input type="text" id="r-tension" value="${esc(r?.tension||'')}" placeholder="Ej: 120/80"></div>
         <div class="form-group"><label>Glucemia (mg/dL)</label><input type="text" id="r-glucemia" value="${esc(r?.glucemia||'')}" placeholder="Ej: 95"></div>
+        <div class="form-group">
+          <label>% Grasa corporal</label>
+          <input type="number" step="0.1" id="r-grasa" value="${esc(String(r?.grasa_pct||''))}" placeholder="Ej: 28.5">
+        </div>
+        <div class="form-group">
+          <label>% Masa muscular</label>
+          <input type="number" step="0.1" id="r-musculo" value="${esc(String(r?.musculo_pct||''))}" placeholder="Ej: 35.2">
+        </div>
       </div>
       <!-- IMC preview -->
       <div id="imc-preview" style="margin:8px 0 4px;min-height:24px"></div>
@@ -2222,6 +2270,8 @@ function guardarResultado(pacienteId, idx) {
     fecha, peso, altura, imc: document.getElementById('r-imc').value,
     tension: document.getElementById('r-tension').value,
     glucemia: document.getElementById('r-glucemia').value,
+    grasa_pct: document.getElementById('r-grasa').value,
+    musculo_pct: document.getElementById('r-musculo').value,
     laboratorios: document.getElementById('r-laboratorios').value,
     observaciones: document.getElementById('r-observaciones').value,
   };
@@ -3462,12 +3512,16 @@ function renderReferencia(el) {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:flex-end">
         <div class="form-group" style="margin-bottom:0">
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">mg por frasco</label>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">mg del frasco</label>
           <input type="number" id="calc-mg" step="0.5" min="0" placeholder="Ej: 10" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">Dosis por frasco</label>
-          <input type="number" id="calc-dosis" step="1" min="1" placeholder="Ej: 4" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">mL de agua</label>
+          <input type="number" id="calc-agua" step="0.5" min="0.1" placeholder="Ej: 2" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">Dosis deseada (mg)</label>
+          <input type="number" id="calc-dosis-mg" step="0.01" min="0" placeholder="Ej: 0.5" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
         </div>
       </div>
       <div id="calc-result" style="margin-top:12px"></div>
@@ -3487,7 +3541,7 @@ function renderReferencia(el) {
           </tr></thead>
           <tbody>
             ${data.length ? data.map((item, i) => `
-              <tr style="cursor:pointer" onclick="document.getElementById('calc-mg').value='${parseFloat(item.presentacion)||''}';calcReconstitucion();document.getElementById('calc-mg').scrollIntoView({behavior:'smooth',block:'center'})">
+              <tr style="cursor:pointer" onclick="document.getElementById('calc-mg').value='${parseFloat(item.presentacion)||''}';document.getElementById('calc-agua').value='${item.diluyente_ml||''}';calcReconstitucion();document.getElementById('calc-mg').scrollIntoView({behavior:'smooth',block:'center'})">
                 <td><strong>${esc(item.nombre)}</strong></td>
                 <td>${esc(item.presentacion)}</td>
                 <td style="text-align:center">${item.diluyente_ml} mL</td>
@@ -3509,45 +3563,50 @@ function renderReferencia(el) {
 }
 
 function calcReconstitucion() {
-  const mg    = parseFloat(document.getElementById('calc-mg')?.value) || 0;
-  const dosis = parseFloat(document.getElementById('calc-dosis')?.value) || 0;
-  const res   = document.getElementById('calc-result');
+  const mg      = parseFloat(document.getElementById('calc-mg')?.value) || 0;
+  const agua    = parseFloat(document.getElementById('calc-agua')?.value) || 0;
+  const dosisMg = parseFloat(document.getElementById('calc-dosis-mg')?.value) || 0;
+  const res     = document.getElementById('calc-result');
   if (!res) return;
-  if (!mg || !dosis) {
-    res.innerHTML = `<div style="padding:10px 14px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:12.5px;color:var(--gray-400);text-align:center">Completá los 2 campos para calcular</div>`;
+  if (!mg || !agua) {
+    res.innerHTML = `<div style="padding:10px 14px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:12.5px;color:var(--gray-400);text-align:center">Ingresá mg del frasco y mL de agua para calcular</div>`;
     return;
   }
-  function recommendedWater(d) {
-    const steps = [0.5,1.0,1.5,2.0,2.5,3.0,4.0,5.0];
-    for (const w of steps) { const u=(w/d)*100; if(u>=20 && Math.abs(u-Math.round(u))<0.001) return w; }
-    for (const w of steps) { const u=(w/d)*100; if(u>=10 && Math.abs(u-Math.round(u))<0.001) return w; }
-    return Math.max(0.5, +(Math.round(d*0.25/0.5)*0.5).toFixed(1));
+  const concentracion = mg / agua;
+  const dosisCount    = dosisMg ? Math.floor(mg / dosisMg) : null;
+  if (!dosisMg) {
+    res.innerHTML = `
+      <div style="padding:12px 16px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:13px;color:var(--on-surface-variant)">
+        Concentración: <strong style="color:var(--primary)">${+concentracion.toFixed(3)} mg/mL</strong>
+        &nbsp;·&nbsp; Cada 0.1 mL = <strong>${+(0.1*concentracion).toFixed(3)} mg</strong>
+        <br><span style="font-size:11.5px;color:var(--gray-400)">Ingresá la dosis deseada en mg para ver las unidades de jeringa</span>
+      </div>`;
+    return;
   }
-  const dil          = recommendedWater(dosis);
-  const mgPorDosis   = +(mg / dosis).toFixed(3);
-  const mlPorDosis   = +(dil / dosis).toFixed(3);
-  const concentracion = +(mg / dil).toFixed(2);
-  const unidades     = Math.round(mlPorDosis * 100);
+  const mlPorDosis = dosisMg / concentracion;
+  const unidades   = Math.round(mlPorDosis * 100);
   res.innerHTML = `
-    <div style="margin-bottom:10px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1.5px solid #7dd3fc;border-radius:var(--radius-sm);padding:16px;text-align:center">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0369a1;margin-bottom:6px">💧 Agregar agua bacteriostática</div>
-      <div style="font-size:36px;font-weight:900;color:#0c4a6e;line-height:1">${dil} mL</div>
-      <div style="font-size:12px;color:#0369a1;margin-top:4px">en el frasco de ${mg} mg · ${dosis} dosis</div>
+    <div style="margin-bottom:10px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;border-radius:var(--radius-sm);padding:16px;text-align:center">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#15803d;margin-bottom:6px">💉 Unidades en jeringa U-100</div>
+      <div style="font-size:42px;font-weight:900;color:#14532d;line-height:1">${unidades}</div>
+      <div style="font-size:12px;color:#16a34a;margin-top:4px">unidades para una dosis de ${dosisMg} mg</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:var(--radius-sm);padding:14px;text-align:center">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#3b82f6;margin-bottom:4px">mg por dosis</div>
-        <div style="font-size:26px;font-weight:800;color:#1d4ed8;line-height:1">${mgPorDosis}</div>
-        <div style="font-size:12px;color:#3b82f6;margin-top:2px">mg</div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#3b82f6;margin-bottom:4px">volumen por dosis</div>
+        <div style="font-size:26px;font-weight:800;color:#1d4ed8;line-height:1">${+mlPorDosis.toFixed(3)}</div>
+        <div style="font-size:12px;color:#3b82f6;margin-top:2px">mL</div>
       </div>
-      <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:var(--radius-sm);padding:14px;text-align:center">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#16a34a;margin-bottom:4px">volumen por dosis</div>
-        <div style="font-size:26px;font-weight:800;color:#15803d;line-height:1">${mlPorDosis}</div>
-        <div style="font-size:12px;color:#16a34a;margin-top:2px">mL &nbsp;·&nbsp; ${unidades} unidades (jeringa U-100)</div>
+      <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border-radius:var(--radius-sm);padding:14px;text-align:center">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#7c3aed;margin-bottom:4px">concentración</div>
+        <div style="font-size:26px;font-weight:800;color:#5b21b6;line-height:1">${+concentracion.toFixed(2)}</div>
+        <div style="font-size:12px;color:#7c3aed;margin-top:2px">mg / mL</div>
       </div>
     </div>
     <div style="margin-top:8px;padding:9px 14px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:12.5px;color:var(--on-surface-variant)">
-      Concentración: <strong>${concentracion} mg/mL</strong> &nbsp;·&nbsp; ${dosis} dosis del frasco &nbsp;·&nbsp; Cada 0.1 mL = <strong>${+(0.1*concentracion).toFixed(3)} mg</strong>
+      Frasco ${mg} mg en ${agua} mL
+      ${dosisCount ? `&nbsp;·&nbsp; ~<strong>${dosisCount} dosis</strong> de ${dosisMg} mg` : ''}
+      &nbsp;·&nbsp; Cada 0.1 mL = <strong>${+(0.1*concentracion).toFixed(3)} mg</strong>
     </div>`;
 }
 
