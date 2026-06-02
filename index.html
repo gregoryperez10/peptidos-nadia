@@ -1456,8 +1456,8 @@ function renderPerfil(el, id) {
           ${d.telefono ? `<span>📞 ${esc(d.telefono)}</span>` : ''}
           ${d.email    ? `<span>✉️ ${esc(d.email)}</span>` : ''}
           ${d.ciudad   ? `<span>📍 ${esc(d.ciudad)}</span>` : ''}
-          ${d.peso     ? `<span>⚖️ ${esc(d.peso)} kg</span>` : ''}
-          ${d.altura   ? `<span>📏 ${esc(d.altura)} cm</span>` : ''}
+          ${d.peso     ? `<span>⚖️ ${esc(d.peso)} lb</span>` : ''}
+          ${d.altura   ? `<span>📏 ${totalInToFtIn(d.altura)}</span>` : ''}
         </div>
       </div>
     </div>
@@ -1484,7 +1484,7 @@ function renderTabDatos(p) {
     ['Nombre',d.nombre],['Apellido',d.apellido],['DNI',d.dni],
     ['Fecha de Nacimiento',formatDate(d.fecha_nacimiento)],['Sexo',d.sexo],
     ['Teléfono',d.telefono],['Email',d.email],['Ciudad',d.ciudad],
-    ['Peso (kg)',d.peso],['Altura (cm)',d.altura],['Ocupación',d.ocupacion]
+    ['Peso (lb)',d.peso],['Altura',totalInToFtIn(d.altura)],['Ocupación',d.ocupacion]
   ];
   return `<div class="card">
     <div class="card-title">Información Personal</div>
@@ -1652,13 +1652,14 @@ function buildImcGauge(imc, peso, alturaNum, sexo) {
   // Ideal weight (Hamwi formula)
   let idealHtml = '';
   if (alturaNum) {
-    const inchTotal = alturaNum / 2.54, over = Math.max(0, inchTotal - 60);
-    const ideal = parseFloat((sexo==='Masculino' ? 48+2.7*over : 45.5+2.2*over).toFixed(1));
-    const diff = peso ? +(parseFloat(peso)-ideal).toFixed(1) : null;
-    const kgDiff = diff!=null ? Math.abs(diff) : null;
-    const diffStr = diff!=null ? (diff>0 ? `${kgDiff} kg por encima del ideal` : diff<0 ? `${kgDiff} kg por debajo del ideal` : 'En el peso ideal ✓') : '';
-    const diffCol  = diff!=null ? (diff===0?'#059669':Math.abs(diff)<3?'#d97706':'#dc2626') : '';
-    idealHtml = `<div style="margin-top:10px;font-size:12px;color:var(--on-surface-variant)">Peso ideal estimado: <strong style="color:var(--on-surface)">${ideal} kg</strong>${diff!=null?` &nbsp;·&nbsp; <span style="color:${diffCol};font-weight:600">${diffStr}</span>`:''}</div>`;
+    // alturaNum is total inches; peso is lbs — Hamwi formula in imperial
+    const over = Math.max(0, alturaNum - 60);
+    const idealLb = parseFloat((sexo==='Masculino' ? 106+6*over : 100+5*over).toFixed(1));
+    const diff = peso ? +(parseFloat(peso)-idealLb).toFixed(1) : null;
+    const lbDiff = diff!=null ? Math.abs(diff) : null;
+    const diffStr = diff!=null ? (diff>0 ? `${lbDiff} lb por encima del ideal` : diff<0 ? `${lbDiff} lb por debajo del ideal` : 'En el peso ideal ✓') : '';
+    const diffCol  = diff!=null ? (diff===0?'#059669':Math.abs(diff)<7?'#d97706':'#dc2626') : '';
+    idealHtml = `<div style="margin-top:10px;font-size:12px;color:var(--on-surface-variant)">Peso ideal estimado: <strong style="color:var(--on-surface)">${idealLb} lb</strong>${diff!=null?` &nbsp;·&nbsp; <span style="color:${diffCol};font-weight:600">${diffStr}</span>`:''}</div>`;
   }
 
   // Scale bar legend
@@ -1761,12 +1762,12 @@ function renderTabResultados(p) {
   const last   = sortedDesc[0];
   const pesoVal = parseFloat(last?.peso || d.peso || 0);
   const altVal  = parseFloat(last?.altura || d.altura || 0);
-  const imcVal  = (pesoVal && altVal) ? parseFloat((pesoVal/Math.pow(altVal/100,2)).toFixed(1)) : null;
+  const imcVal  = calcImcImperial(pesoVal, altVal);
 
   // ── IMC gauge ──
   const gaugeHtml = imcVal ? `
     <div class="imc-gauge-card">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant);margin-bottom:10px">📊 Estado Actual · ${pesoVal} kg · ${altVal} cm</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant);margin-bottom:10px">📊 Estado Actual · ${pesoVal} lb · ${totalInToFtIn(altVal)}</div>
       <div class="imc-gauge-row">${buildImcGauge(imcVal, pesoVal, altVal, d.sexo)}</div>
     </div>` : '';
 
@@ -1795,7 +1796,7 @@ function renderTabResultados(p) {
   let imcChartHtml = '';
   if (imcAsc.length >= 2) {
     const ptsImc = imcAsc.map(r=>{
-      const imc = r.imc || parseFloat((parseFloat(r.peso)/Math.pow(parseFloat(r.altura)/100,2)).toFixed(1));
+      const imc = r.imc || calcImcImperial(r.peso, r.altura);
       return { v: imc, label: _fmtShort(r.fecha) };
     });
     const firstImc = ptsImc[0].v, currImc = ptsImc[ptsImc.length-1].v;
@@ -1858,7 +1859,7 @@ function renderTabResultados(p) {
   // ── List with trend deltas ──
   const listHtml = sortedDesc.map((r, listIdx) => {
     const origI = res.indexOf(r);
-    const rImc = r.imc || (r.peso && r.altura ? parseFloat((parseFloat(r.peso)/Math.pow(parseFloat(r.altura)/100,2)).toFixed(1)) : null);
+    const rImc = r.imc || calcImcImperial(r.peso, r.altura);
     const prevR = sortedDesc[listIdx + 1];
     function _delta(curr, prev, unit, lowerIsBetter) {
       if (!curr || !prev) return '';
@@ -1868,7 +1869,7 @@ function renderTabResultados(p) {
       const col   = d === 0 ? '#6b7280' : better ? '#059669' : '#dc2626';
       return `<span style="font-size:11px;font-weight:700;color:${col};margin-left:4px">${arrow} ${d>0?'+':''}${d}${unit}</span>`;
     }
-    const deltaPeso    = _delta(r.peso,      prevR?.peso,       ' kg', true);
+    const deltaPeso    = _delta(r.peso,      prevR?.peso,       ' lb', true);
     const deltaImc     = _delta(rImc,         prevR ? (prevR.imc||(prevR.peso&&prevR.altura?parseFloat((parseFloat(prevR.peso)/Math.pow(parseFloat(prevR.altura)/100,2)).toFixed(1)):null)) : null, '', true);
     const deltaGrasa   = _delta(r.grasa_pct,  prevR?.grasa_pct,  '%',  true);
     const deltaMusculo = _delta(r.musculo_pct, prevR?.musculo_pct,'%',  false);
@@ -1881,8 +1882,8 @@ function renderTabResultados(p) {
         </div>
       </div>
       <div class="resultado-grid">
-        ${r.peso        ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} kg${deltaPeso}</div></div>` : ''}
-        ${r.altura      ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${r.altura} cm</div></div>` : ''}
+        ${r.peso        ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} lb${deltaPeso}</div></div>` : ''}
+        ${r.altura      ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${totalInToFtIn(r.altura)}</div></div>` : ''}
         ${rImc          ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}${deltaImc}</div></div>` : ''}
         ${r.grasa_pct   ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">% Grasa</div><div style="font-weight:800;font-size:16px;color:#f97316">${r.grasa_pct}%${deltaGrasa}</div></div>` : ''}
         ${r.musculo_pct ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">% Músculo</div><div style="font-weight:800;font-size:16px;color:#06b6d4">${r.musculo_pct}%${deltaMusculo}</div></div>` : ''}
@@ -1938,8 +1939,13 @@ function renderFormPaciente(el, id) {
             <div class="form-group"><label>Teléfono</label><input type="tel" name="telefono" value="${esc(d.telefono||'')}" placeholder="Ej: 11 1234-5678"></div>
             <div class="form-group"><label>Email</label><input type="email" name="email" value="${esc(d.email||'')}" placeholder="Ej: maria@email.com"></div>
             <div class="form-group"><label>Ciudad</label><input type="text" name="ciudad" value="${esc(d.ciudad||'')}" placeholder="Ej: Buenos Aires"></div>
-            <div class="form-group"><label>Peso actual (kg)</label><input type="number" step="0.1" name="peso" value="${esc(d.peso||'')}" placeholder="Ej: 65.5"></div>
-            <div class="form-group"><label>Altura (cm)</label><input type="number" name="altura" value="${esc(d.altura||'')}" placeholder="Ej: 165"></div>
+            <div class="form-group"><label>Peso (lb)</label><input type="number" step="0.1" name="peso" value="${esc(d.peso||'')}" placeholder="Ej: 145"></div>
+            <div class="form-group"><label>Altura (pie + pulgadas)</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <input type="number" name="altura_ft" step="1" min="0" value="${esc(String(Math.floor((parseFloat(d.altura)||0)/12)||''))}" placeholder="Pies (5)">
+                <input type="number" name="altura_in" step="0.5" min="0" max="11.9" value="${esc(String(+(((parseFloat(d.altura)||0)%12).toFixed(1))||''))}" placeholder="Pulg (6)">
+              </div>
+            </div>
           </div>
           <div class="form-group" style="margin-top:14px">
             <label>Antecedentes clínicos / Observaciones generales</label>
@@ -1964,7 +1970,9 @@ function guardarPaciente(e, id) {
     nombre:g('nombre'), apellido:g('apellido'), dni:g('dni'),
     fecha_nacimiento:g('fecha_nacimiento'), sexo:g('sexo'),
     ocupacion:g('ocupacion'), telefono:g('telefono'), email:g('email'),
-    ciudad:g('ciudad'), peso:g('peso'), altura:g('altura'), antecedentes:g('antecedentes')
+    ciudad:g('ciudad'), peso:g('peso'),
+    altura: String(+(parseFloat(g('altura_ft')||0)*12 + parseFloat(g('altura_in')||0)).toFixed(1) || ''),
+    antecedentes:g('antecedentes')
   };
   savePaciente(p);
   showToast('✅ Paciente guardado correctamente', 'success');
@@ -2244,9 +2252,9 @@ function openModalResultado(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   const r = idx !== null ? p.resultados[idx] : null;
   const d = p.datos_personales;
-  // Pre-fill altura from patient data or previous record
-  const alturaDefault = r?.altura || d.altura || '';
-  const pesoDefault   = r?.peso   || '';
+  const altDefault = r?.altura || d.altura || '';
+  const { ft: altFt, inch: altIn } = splitInches(altDefault);
+  const pesoDefault = r?.peso || '';
   openModal(`<div class="modal">
     <div class="modal-header">
       <h3>📈 ${r ? 'Editar Registro' : 'Nuevo Registro de Evolución'}</h3>
@@ -2256,12 +2264,15 @@ function openModalResultado(pacienteId, idx) {
       <div class="form-grid">
         <div class="form-group"><label>Fecha *</label><input type="date" id="r-fecha" value="${r?.fecha||new Date().toISOString().split('T')[0]}"></div>
         <div class="form-group">
-          <label>Peso (kg)</label>
-          <input type="number" step="0.1" id="r-peso" value="${esc(String(r?.peso||pesoDefault))}" placeholder="Ej: 65.5" oninput="calcImcModal()">
+          <label>Peso (lb)</label>
+          <input type="number" step="0.1" id="r-peso" value="${esc(String(r?.peso||pesoDefault))}" placeholder="Ej: 145" oninput="calcImcModal()">
         </div>
         <div class="form-group">
-          <label>Altura (cm)</label>
-          <input type="number" step="1" id="r-altura" value="${esc(String(alturaDefault))}" placeholder="Ej: 165" oninput="calcImcModal()">
+          <label>Altura (pie + pulgadas)</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <input type="number" step="1" min="0" id="r-altura-ft" value="${altDefault ? altFt : ''}" placeholder="Pies (5)" oninput="calcImcModal()">
+            <input type="number" step="0.5" min="0" max="11.9" id="r-altura-in" value="${altDefault ? altIn : ''}" placeholder="Pulg (6)" oninput="calcImcModal()">
+          </div>
         </div>
         <div class="form-group">
           <label>IMC <span style="font-size:10px;color:var(--gray-400)">(calculado automático)</span></label>
@@ -2292,12 +2303,14 @@ function openModalResultado(pacienteId, idx) {
 }
 
 function calcImcModal() {
-  const peso = parseFloat(document.getElementById('r-peso')?.value);
-  const alt  = parseFloat(document.getElementById('r-altura')?.value);
+  const lbs  = parseFloat(document.getElementById('r-peso')?.value);
+  const ft   = parseFloat(document.getElementById('r-altura-ft')?.value) || 0;
+  const inc  = parseFloat(document.getElementById('r-altura-in')?.value) || 0;
+  const totalIn = ft * 12 + inc;
   const imcEl = document.getElementById('r-imc');
   const prev  = document.getElementById('imc-preview');
-  if (peso && alt && alt > 0 && imcEl) {
-    const imc = +(peso / Math.pow(alt/100, 2)).toFixed(1);
+  const imc   = calcImcImperial(lbs, totalIn);
+  if (imc && imcEl) {
     imcEl.value = imc;
     const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
     if (prev) prev.innerHTML = `<span style="font-weight:700;font-size:15px;color:${cat.c}">${imc}</span> <span style="font-size:12px;color:${cat.c}">${cat.l}</span>`;
@@ -2312,8 +2325,9 @@ function guardarResultado(pacienteId, idx) {
   if (!fecha) { showToast('Ingresá la fecha', 'error'); return; }
   const p = getPaciente(pacienteId);
   const peso = document.getElementById('r-peso').value;
-  const altura = document.getElementById('r-altura').value;
-  // Auto-update patient altura if provided
+  const altFt = parseFloat(document.getElementById('r-altura-ft')?.value) || 0;
+  const altIn = parseFloat(document.getElementById('r-altura-in')?.value) || 0;
+  const altura = altFt || altIn ? String(+(altFt*12 + altIn).toFixed(1)) : '';
   if (altura && !p.datos_personales.altura) {
     p.datos_personales.altura = altura;
   }
@@ -2507,7 +2521,7 @@ function renderImportPreview(rows) {
             <option value="dni">DNI</option><option value="fecha_nacimiento">Fecha Nacimiento</option>
             <option value="sexo">Sexo</option><option value="telefono">Teléfono</option>
             <option value="email">Email</option><option value="ciudad">Ciudad</option>
-            <option value="peso">Peso (kg)</option><option value="altura">Altura (cm)</option>
+            <option value="peso">Peso (lb)</option><option value="altura">Altura (pulgadas)</option>
             <option value="antecedentes">Antecedentes</option>
           </optgroup>
           <optgroup label="Péptido">
@@ -2642,13 +2656,13 @@ function exportarExcel() {
       'Nombre':d.nombre||'', 'Apellido':d.apellido||'', 'DNI':d.dni||'',
       'Fecha Nac.':d.fecha_nacimiento||'', 'Sexo':d.sexo||'',
       'Teléfono':d.telefono||'', 'Email':d.email||'', 'Ciudad':d.ciudad||'',
-      'Peso (kg)':d.peso||'', 'Altura (cm)':d.altura||'',
+      'Peso (lb)':d.peso||'', 'Altura':totalInToFtIn(d.altura),
       'Péptidos Activos':prots.filter(x=>x.activo).map(x=>x.peptido).join(', '),
       'Dosis':prots.filter(x=>x.activo).map(x=>x.dosis).join(', '),
       'Frecuencia':prots.filter(x=>x.activo).map(x=>x.frecuencia).join(', '),
       'Última Consulta':lastCon.fecha||'', 'Notas':lastCon.notas||'',
       'Próxima Consulta':lastCon.proxima_consulta||'',
-      'Último Peso':lastRes.peso||'', 'Último Lab.':lastRes.laboratorios||'',
+      'Último Peso (lb)':lastRes.peso||'', 'Último Lab.':lastRes.laboratorios||'',
       'Observaciones':lastRes.observaciones||'', 'Antecedentes':d.antecedentes||'',
     };
   });
@@ -2713,6 +2727,22 @@ function calcEdad(fechaNac) {
     return edad + ' años';
   } catch { return '—'; }
 }
+function lbsToKg(lb) { return lb * 0.453592; }
+function inToM(inches) { return inches * 0.0254; }
+function totalInToFtIn(totalIn) {
+  const n = parseFloat(totalIn);
+  if (!n || isNaN(n) || n <= 0) return '—';
+  return `${Math.floor(n/12)}'${Math.round(n%12)}"`;
+}
+function calcImcImperial(lbs, totalInches) {
+  if (!lbs || !totalInches || totalInches <= 0) return null;
+  return +(lbsToKg(parseFloat(lbs)) / Math.pow(inToM(parseFloat(totalInches)), 2)).toFixed(1);
+}
+function splitInches(totalIn) {
+  const n = parseFloat(totalIn) || 0;
+  return { ft: Math.floor(n/12), inch: +(n%12).toFixed(1) };
+}
+
 let toastTimer = null;
 function showToast(msg, type) {
   const t = document.getElementById('toast');
