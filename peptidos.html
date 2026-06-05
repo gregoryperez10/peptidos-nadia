@@ -2758,6 +2758,7 @@ function renderCompraCard(c, db, idx) {
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
           ${!c.cortesia_suplidor?`<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();modalPagoCompra('${c.id}')">💵 Abonar</button>`:''}
           ${pend>0&&!c.cortesia_suplidor?`<button class="btn btn-outline btn-sm" style="color:#92400e;border-color:#fcd34d;background:#fffbeb" onclick="event.stopPropagation();modalCortSupDeuda('${c.id}',${pend})">🎁 Cort. sup.</button>`:''}
+          <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();modalEditarCompra('${c.id}')">✏️ Editar</button>
           <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();modalCortesiaCliente('${c.id}')">🤝 Cortesía</button>
           <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();modalAjustarFrasco('${c.id}')">🪣 Ajustar</button>
           <button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();eliminarCompra('${c.id}')">🗑️</button>
@@ -2828,6 +2829,41 @@ function guardarCompra() {
   const vencimiento = document.getElementById('nc-vencimiento').value || '';
   compras.unshift({ id:newId(), peptido, mg:mgTotal, fecha_adquisicion:fecha, fecha_vencimiento:vencimiento, costo_total:costo, cortesia_suplidor:cortesiaTotal, mg_cortesia_suplidor:cortesiaParcial?mgCortesiaSup:0, notas:document.getElementById('nc-notas').value.trim(), pagos:[], cortesias_clientes:[] });
   saveCompras(compras); closeModal(); renderProveedor(document.getElementById('content'));
+}
+
+function modalEditarCompra(compraId) {
+  const c=getCompras().find(x=>x.id===compraId); if(!c) return;
+  const pag=(c.pagos||[]).reduce((s,p)=>s+p.monto,0);
+  openModal(`<div class="modal"><div class="modal-header"><h3>✏️ Editar Frasco — ${esc(c.peptido)}</h3><button class="close-btn" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div style="background:var(--gray-50);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--gray-500)">Ya registrado como pagado: <strong style="color:var(--success)">$${pag.toLocaleString('es-AR')}</strong>. Si cambiás el costo total al mismo valor, queda saldado automáticamente.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Péptido</label><input type="text" id="ec-peptido" value="${esc(c.peptido)}"></div>
+        <div class="form-group"><label>Cantidad (mg)</label><input type="number" step="0.5" id="ec-mg" value="${c.mg||''}"></div>
+      </div>
+      <div class="form-group"><label>Costo total ($)</label><input type="number" step="0.01" id="ec-costo" value="${c.costo_total||0}">
+        <div style="font-size:11.5px;color:var(--gray-400);margin-top:4px">Si el suplidor cubrió parte: poné acá el monto que realmente debés pagar</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Fecha adquisición</label><input type="date" id="ec-fecha" value="${c.fecha_adquisicion||''}"></div>
+        <div class="form-group"><label>Fecha vencimiento</label><input type="date" id="ec-venc" value="${c.fecha_vencimiento||''}"></div>
+      </div>
+      <div class="form-group"><label>Notas</label><textarea id="ec-notas" rows="2">${esc(c.notas||'')}</textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="guardarEditarCompra('${compraId}')">💾 Guardar cambios</button></div>
+  </div>`);
+}
+function guardarEditarCompra(compraId) {
+  const compras=getCompras(), c=compras.find(x=>x.id===compraId); if(!c) return;
+  const peptido=document.getElementById('ec-peptido').value.trim();
+  if (!peptido) { showToast('El nombre del péptido es requerido','error'); return; }
+  c.peptido=peptido;
+  c.mg=parseFloat(document.getElementById('ec-mg').value)||c.mg;
+  c.costo_total=parseFloat(document.getElementById('ec-costo').value)||0;
+  c.fecha_adquisicion=document.getElementById('ec-fecha').value||c.fecha_adquisicion;
+  c.fecha_vencimiento=document.getElementById('ec-venc').value||'';
+  c.notas=document.getElementById('ec-notas').value.trim();
+  saveCompras(compras); closeModal(); showToast('Frasco actualizado ✓','success'); renderProveedor(document.getElementById('content'));
 }
 
 function modalPagoCompra(compraId) {
