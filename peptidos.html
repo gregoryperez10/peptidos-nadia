@@ -429,7 +429,7 @@ select { background: var(--white); cursor: pointer; }
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(15,23,42,0.55);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1100; padding: 20px; backdrop-filter: blur(2px);
+  z-index: 200; padding: 20px; backdrop-filter: blur(2px);
   animation: fadeIn 0.15s ease;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -900,13 +900,10 @@ select { background: var(--white); cursor: pointer; }
     </div>
     <div class="nav-section-label" style="margin-top:10px">Herramientas</div>
     <div class="nav-item" onclick="navigate('importar')">
-      <span class="nav-icon">upload_file</span> Importar / Backup
+      <span class="nav-icon">upload_file</span> Importar Excel
     </div>
     <div class="nav-item" onclick="exportarExcel()">
       <span class="nav-icon">download</span> Exportar Excel
-    </div>
-    <div class="nav-item" onclick="exportarBackupJSON()">
-      <span class="nav-icon">backup</span> Descargar Backup
     </div>
     <div class="nav-section-label" style="margin-top:10px">IA &amp; Finanzas</div>
     <div class="nav-item" onclick="navigate('asistente')">
@@ -991,13 +988,10 @@ select { background: var(--white); cursor: pointer; }
     <span class="more-icon"><span class="material-symbols-outlined" style="font-size:20px;color:#0051d5">inventory_2</span></span> Inventario
   </div>
   <div class="more-item" onclick="closeMoreDrawer();navigate('importar')">
-    <span class="more-icon"><span class="material-symbols-outlined" style="font-size:20px;color:#0051d5">upload_file</span></span> Importar / Backup
+    <span class="more-icon"><span class="material-symbols-outlined" style="font-size:20px;color:#0051d5">upload_file</span></span> Importar Excel
   </div>
   <div class="more-item" onclick="closeMoreDrawer();exportarExcel()">
     <span class="more-icon"><span class="material-symbols-outlined" style="font-size:20px;color:#0051d5">download</span></span> Exportar Excel
-  </div>
-  <div class="more-item" onclick="closeMoreDrawer();exportarBackupJSON()">
-    <span class="more-icon"><span class="material-symbols-outlined" style="font-size:20px;color:#0051d5">backup</span></span> Descargar Backup JSON
   </div>
   <div class="more-item" onclick="closeMoreDrawer();navigate('referencia')">
     <span class="more-icon"><span class="material-symbols-outlined" style="font-size:20px;color:#0051d5">science</span></span> Tabla de Péptidos
@@ -1078,7 +1072,7 @@ function navigate(page, param) {
 
   const titles = {
     dashboard:'Dashboard', pacientes:'Lista de Pacientes', nuevo:'Nuevo Paciente',
-    perfil:'Perfil del Paciente', editar:'Editar Paciente', importar:'Importar / Backup',
+    perfil:'Perfil del Paciente', editar:'Editar Paciente', importar:'Importar desde Excel',
     asistente:'💬 Asistente IA', finanzas:'💰 Finanzas', proveedor:'📦 Proveedor / Frascos', referencia:'🔬 Tabla de Péptidos', sync:'☁️ Sincronizar',
   };
   document.getElementById('page-title').textContent = titles[page] || page;
@@ -1457,8 +1451,8 @@ function renderPerfil(el, id) {
           ${d.telefono ? `<span>📞 ${esc(d.telefono)}</span>` : ''}
           ${d.email    ? `<span>✉️ ${esc(d.email)}</span>` : ''}
           ${d.ciudad   ? `<span>📍 ${esc(d.ciudad)}</span>` : ''}
-          ${d.peso     ? `<span>⚖️ ${esc(d.peso)} lb</span>` : ''}
-          ${d.altura   ? `<span>📏 ${totalInToFtIn(d.altura)}</span>` : ''}
+          ${d.peso     ? `<span>⚖️ ${esc(d.peso)} kg</span>` : ''}
+          ${d.altura   ? `<span>📏 ${esc(d.altura)} cm</span>` : ''}
         </div>
       </div>
     </div>
@@ -1485,7 +1479,7 @@ function renderTabDatos(p) {
     ['Nombre',d.nombre],['Apellido',d.apellido],['DNI',d.dni],
     ['Fecha de Nacimiento',formatDate(d.fecha_nacimiento)],['Sexo',d.sexo],
     ['Teléfono',d.telefono],['Email',d.email],['Ciudad',d.ciudad],
-    ['Peso (lb)',d.peso],['Altura',totalInToFtIn(d.altura)],['Ocupación',d.ocupacion]
+    ['Peso (kg)',d.peso],['Altura (cm)',d.altura],['Ocupación',d.ocupacion]
   ];
   return `<div class="card">
     <div class="card-title">Información Personal</div>
@@ -1502,30 +1496,20 @@ function renderTabDatos(p) {
 
 function renderTabPeptidos(p) {
   const prots = p.protocolo_peptidos || [];
-  const estadoBadge = {
-    activo:     {cls:'badge-green',  label:'Activo'},
-    suspendido: {cls:'badge-yellow', label:'⏸ Suspendido'},
-    finalizado: {cls:'badge-gray',   label:'Finalizado'},
-  };
   return `
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px">
       <button class="btn btn-outline btn-sm" onclick="openCopiarProtocolo('${p.id}')" title="Copiar protocolo de otro paciente">📋 Copiar de otro paciente</button>
       <button class="btn btn-primary" onclick="openModalPeptido('${p.id}',null)">➕ Agregar Péptido</button>
     </div>
     ${!prots.length ? `<div class="empty"><div class="icon">💉</div><h3>Sin protocolo cargado</h3><p>Agregá el primer péptido del protocolo</p></div>` : ''}
-    ${prots.map((prot,i) => {
-      const est = getPeptidoEstado(prot);
-      const eb  = estadoBadge[est] || estadoBadge.finalizado;
-      return `
-      <div class="protocol-item" style="${est==='suspendido'?'opacity:0.8;border-left:3px solid #f59e0b':''}">
+    ${prots.map((prot,i) => `
+      <div class="protocol-item">
         <div class="protocol-item-header">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:14px;font-weight:700">${esc(prot.peptido)}</span>
-            <span class="badge ${eb.cls}">${eb.label}</span>
+            <span class="badge ${prot.activo ? 'badge-green' : 'badge-gray'}">${prot.activo ? 'Activo' : 'Finalizado'}</span>
           </div>
-          <div style="display:flex;gap:5px;flex-shrink:0">
-            ${est==='activo' ? `<button class="btn btn-outline btn-sm" style="color:#b45309;border-color:#fcd34d" onclick="suspenderPeptido('${p.id}',${i})" title="Suspender tratamiento">⏸</button>` : ''}
-            ${est==='suspendido' ? `<button class="btn btn-outline btn-sm" style="color:#059669;border-color:#6ee7b7" onclick="reactivarPeptido('${p.id}',${i})" title="Reactivar">▶</button>` : ''}
+          <div style="display:flex;gap:5px">
             <button class="btn btn-outline btn-sm" onclick="openModalPeptido('${p.id}',${i})">✏️</button>
             <button class="btn btn-outline btn-sm" onclick="eliminarPeptido('${p.id}',${i})">🗑️</button>
           </div>
@@ -1536,12 +1520,10 @@ function renderTabPeptidos(p) {
           <div class="protocol-field"><label>Vía de admin.</label><p>${esc(prot.via||'—')}</p></div>
           <div class="protocol-field"><label>Objetivo</label><p>${esc(prot.objetivo||'—')}</p></div>
           <div class="protocol-field"><label>Fecha inicio</label><p>${formatDate(prot.fecha_inicio)}</p></div>
-          <div class="protocol-field"><label>${est==='suspendido'?'Fecha suspensión':'Fecha fin'}</label><p>${prot.fecha_fin ? formatDate(prot.fecha_fin) : '—'}</p></div>
+          <div class="protocol-field"><label>Fecha fin</label><p>${prot.fecha_fin ? formatDate(prot.fecha_fin) : '—'}</p></div>
         </div>
-        ${est==='suspendido' && prot.motivo_suspension ? `<div style="margin-top:8px;font-size:12.5px;background:#fef3c7;color:#92400e;padding:8px 10px;border-radius:6px;border-left:3px solid #f59e0b">⏸ Motivo: ${esc(prot.motivo_suspension)}</div>` : ''}
         ${prot.notas ? `<div style="margin-top:8px;font-size:12.5px;color:var(--gray-600);background:var(--gray-50);padding:8px 10px;border-radius:6px">📝 ${esc(prot.notas)}</div>` : ''}
-      </div>`;
-    }).join('')}`;
+      </div>`).join('')}`;
 }
 
 function renderTabConsultas(p) {
@@ -1611,9 +1593,10 @@ function renderTabConsultas(p) {
 }
 
 function buildImcGauge(imc, peso, alturaNum, sexo) {
-  const W=300, H=164, cx=150, cy=152, R=118, Ri=78;
+  const W=220, H=118, cx=110, cy=110, R=88, Ri=58;
   const minI=10, maxI=40;
   const clamp = v => Math.max(minI, Math.min(maxI, v));
+  // angle: minI→180° (left), maxI→0° (right), passing through top(90°)
   const toAngle = v => 180 - (clamp(v) - minI) / (maxI - minI) * 180;
   const pt = (deg, r) => {
     const rad = deg * Math.PI / 180;
@@ -1625,84 +1608,31 @@ function buildImcGauge(imc, peso, alturaNum, sexo) {
     const lg = Math.abs(a1-a2)>=180?1:0;
     return `M${ox1},${oy1} A${R},${R} 0 ${lg} 0 ${ox2},${oy2} L${ix2},${iy2} A${Ri},${Ri} 0 ${lg} 1 ${ix1},${iy1}Z`;
   };
-  const zones = [
-    [10,18.5,'#60a5fa','#1e40af','Bajo\npeso'],
-    [18.5,25,'#34d399','#065f46','Normal'],
-    [25,30,'#fbbf24','#92400e','Sobre\npeso'],
-    [30,35,'#f87171','#991b1b','Ob.\nGrado I'],
-    [35,40,'#ef4444','#7f1d1d','Ob.\nGrado II'],
-  ];
-  const cat = imc<18.5?{l:'Bajo peso',c:'#1d4ed8',bg:'#dbeafe',z:0}:imc<25?{l:'Normal ✓',c:'#059669',bg:'#d1fae5',z:1}:imc<30?{l:'Sobrepeso',c:'#b45309',bg:'#fef3c7',z:2}:imc<35?{l:'Obesidad Grado I',c:'#dc2626',bg:'#fee2e2',z:3}:{l:'Obesidad Grado II+',c:'#7f1d1d',bg:'#fecaca',z:4};
-
-  // Arcs — active zone gets a slight glow outline
-  const arcs = zones.map(([f,t,c,cd,lbl],zi)=>{
-    const isActive = zi === cat.z;
-    return `<path d="${arcPath(f,t)}" fill="${c}" opacity="${isActive?1:0.55}" ${isActive?`filter="url(#glow)"`:''}/>`;
-  }).join('');
-
-  // Tick dividers + value labels
-  const tickVals = [18.5,25,30,35];
-  const ticks = tickVals.map(v=>{
-    const a=toAngle(v);
-    const [ox,oy]=pt(a,R+3), [ix,iy]=pt(a,Ri-3);
-    const [lx,ly]=pt(a,R+17);
-    return `<line x1="${ox}" y1="${oy}" x2="${ix}" y2="${iy}" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-            <text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#374151" font-weight="700">${v}</text>`;
-  }).join('');
-
-  // Zone labels at midpoint of each arc
-  const zoneLabels = zones.map(([f,t,c,cd,lbl],zi)=>{
-    const mid=(f+t)/2, a=toAngle(mid);
-    const [lx,ly]=pt(a,(R+Ri)/2);
-    const lines=lbl.split('\n');
-    const dy=lines.length>1?-5:0;
-    return lines.map((ln,i)=>`<text x="${lx.toFixed(1)}" y="${(ly+dy+i*10).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="${zi===cat.z?9.5:8}" fill="${zi===cat.z?cd:'#374151'}" font-weight="${zi===cat.z?'800':'600'}" opacity="${zi===cat.z?1:0.75}">${ln}</text>`).join('');
-  }).join('');
-
+  const zones=[[10,18.5,'#93c5fd'],[18.5,25,'#34d399'],[25,30,'#fbbf24'],[30,35,'#f87171'],[35,40,'#b91c1c']];
+  const arcs = zones.map(([f,t,c])=>`<path d="${arcPath(f,t)}" fill="${c}"/>`).join('');
+  const ticks=[18.5,25,30,35].map(v=>{const a=toAngle(v);const[ox,oy]=pt(a,R+4);const[ix,iy]=pt(a,Ri-4);return`<line x1="${ox}" y1="${oy}" x2="${ix}" y2="${iy}" stroke="white" stroke-width="2.5" stroke-linecap="round"/>`;}).join('');
+  const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb',bg:'#dbeafe'}:imc<25?{l:'Normal ✓',c:'#059669',bg:'#d1fae5'}:imc<30?{l:'Sobrepeso',c:'#d97706',bg:'#fef3c7'}:imc<35?{l:'Obesidad I',c:'#dc2626',bg:'#fee2e2'}:{l:'Obesidad II+',c:'#991b1b',bg:'#fecaca'};
   const cssRot = +((clamp(imc) - minI) / (maxI - minI) * 180 - 90).toFixed(1);
   const uid = 'n'+(Date.now()%99999);
-
-  // Ideal weight (Hamwi formula)
+  // Ideal weight (Hamwi)
   let idealHtml = '';
   if (alturaNum) {
-    // alturaNum is total inches; peso is lbs — Hamwi formula in imperial
-    const over = Math.max(0, alturaNum - 60);
-    const idealLb = parseFloat((sexo==='Masculino' ? 106+6*over : 100+5*over).toFixed(1));
-    const diff = peso ? +(parseFloat(peso)-idealLb).toFixed(1) : null;
-    const lbDiff = diff!=null ? Math.abs(diff) : null;
-    const diffStr = diff!=null ? (diff>0 ? `${lbDiff} lb por encima del ideal` : diff<0 ? `${lbDiff} lb por debajo del ideal` : 'En el peso ideal ✓') : '';
-    const diffCol  = diff!=null ? (diff===0?'#059669':Math.abs(diff)<7?'#d97706':'#dc2626') : '';
-    idealHtml = `<div style="margin-top:10px;font-size:12px;color:var(--on-surface-variant)">Peso ideal estimado: <strong style="color:var(--on-surface)">${idealLb} lb</strong>${diff!=null?` &nbsp;·&nbsp; <span style="color:${diffCol};font-weight:600">${diffStr}</span>`:''}</div>`;
+    const inchTotal = alturaNum / 2.54, over = Math.max(0, inchTotal - 60);
+    const ideal = parseFloat((sexo==='Masculino' ? 48+2.7*over : 45.5+2.2*over).toFixed(1));
+    const diff = peso ? +(parseFloat(peso)-ideal).toFixed(1) : null;
+    const diffStr = diff!=null ? (diff>0?`+${diff} kg por encima`:`${Math.abs(diff)} kg por debajo`) : '';
+    idealHtml = `<div style="font-size:12px;color:var(--on-surface-variant);margin-top:6px">Peso ideal estimado: <strong style="color:var(--on-surface)">${ideal} kg</strong>${diff!=null?' · <span style="color:'+cat.c+'">'+diffStr+'</span>':''}</div>`;
   }
-
-  // Scale bar legend
-  const scaleBar = `
-    <div style="margin-top:12px;border-radius:8px;overflow:hidden;display:flex;height:22px">
-      ${zones.map(([f,t,c,cd,lbl],zi)=>`<div style="flex:${t-f};background:${c};opacity:${zi===cat.z?1:0.5};position:relative;display:flex;align-items:center;justify-content:center">
-        ${zi===cat.z?`<div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:14px">▼</div>`:''}
-      </div>`).join('')}
-    </div>
-    <div style="display:flex;margin-top:2px">
-      ${zones.map(([f,t,c,cd,lbl])=>`<div style="flex:${t-f};font-size:8px;color:#6b7280;text-align:center;line-height:1.2">${f}</div>`).join('')}
-      <div style="font-size:8px;color:#6b7280;padding-left:2px">40</div>
-    </div>`;
-
-  return `<div style="width:100%;max-width:320px;text-align:center">
-    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;overflow:visible">
-      <defs>
-        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-      ${arcs}${ticks}${zoneLabels}
-      <line id="${uid}" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-R+8}" stroke="#0f172a" stroke-width="4" stroke-linecap="round" class="imc-needle-anim" data-rot="${cssRot}" style="transform-origin:${cx}px ${cy}px;transform:rotate(-90deg)"/>
-      <circle cx="${cx}" cy="${cy}" r="9" fill="#0f172a"/>
-      <circle cx="${cx}" cy="${cy}" r="4.5" fill="#f8fafc"/>
+  return `<div style="text-align:center">
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;overflow:visible">${arcs}${ticks}
+      <line id="${uid}" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-R+5}" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" class="imc-needle-anim" data-rot="${cssRot}" style="transform-origin:${cx}px ${cy}px;transform:rotate(-90deg)"/>
+      <circle cx="${cx}" cy="${cy}" r="7" fill="#0f172a"/><circle cx="${cx}" cy="${cy}" r="3.5" fill="#f8fafc"/>
+      <text x="6" y="${cy+15}" font-size="8.5" fill="#3b82f6" font-weight="700">Bajo</text>
+      <text x="${cx-15}" y="14" font-size="8.5" fill="#059669" font-weight="700">Normal</text>
+      <text x="${W-36}" y="${cy+15}" font-size="8.5" fill="#b91c1c" font-weight="700">Obeso</text>
     </svg>
-    <div style="font-size:38px;font-weight:900;color:${cat.c};line-height:1;margin-top:-10px">${imc}</div>
-    <div style="margin-top:4px"><span style="background:${cat.bg};color:${cat.c};padding:4px 18px;border-radius:20px;font-size:13px;font-weight:800;letter-spacing:.01em">${cat.l}</span></div>
-    ${scaleBar}
+    <div style="font-size:34px;font-weight:800;color:${cat.c};line-height:1;margin-top:-4px">${imc}</div>
+    <span style="background:${cat.bg};color:${cat.c};padding:3px 14px;border-radius:20px;font-size:12px;font-weight:700">${cat.l}</span>
     ${idealHtml}
   </div>`;
 }
@@ -1718,207 +1648,53 @@ function initImcGauges() {
   });
 }
 
-function _fmtShort(dateStr) {
-  if (!dateStr) return '';
-  try {
-    const dt = new Date(dateStr + 'T12:00:00');
-    return dt.toLocaleDateString('es-AR', { day:'2-digit', month:'short' }).replace('.','');
-  } catch { return dateStr; }
-}
-
-function _buildTrendChart(pts, color, gradId, unit) {
-  if (pts.length < 2) return '';
-  const W=340, H=110, PL=38, PR=8, PT=18, PB=22;
-  const cW=W-PL-PR, cH=H-PT-PB;
-  const vals = pts.map(p=>p.v);
-  const minV = Math.min(...vals), maxV = Math.max(...vals);
-  const range = (maxV - minV) || 1;
-  const coords = pts.map((p,i) => {
-    const x = PL + (pts.length===1 ? cW/2 : (i/(pts.length-1))*cW);
-    const y = PT + (1-(p.v-minV)/range)*cH;
-    return { x, y, v:p.v, label:p.label };
-  });
-  const linePath = coords.map((c,i)=>`${i===0?'M':'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
-  const areaPath = linePath + ` L${coords[coords.length-1].x.toFixed(1)},${(PT+cH).toFixed(1)} L${coords[0].x.toFixed(1)},${(PT+cH).toFixed(1)} Z`;
-  const dotsSvg = coords.map(c=>`
-    <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4" fill="${color}" stroke="white" stroke-width="2"/>
-    <text x="${c.x.toFixed(1)}" y="${(c.y-9).toFixed(1)}" text-anchor="middle" font-size="9" fill="${color}" font-weight="700">${c.v}</text>
-  `).join('');
-  const lblFirst = `<text x="${coords[0].x.toFixed(1)}" y="${(PT+cH+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="#9ca3af">${coords[0].label}</text>`;
-  const lblLast  = coords.length>1 ? `<text x="${coords[coords.length-1].x.toFixed(1)}" y="${(PT+cH+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="#9ca3af">${coords[coords.length-1].label}</text>` : '';
-  const lblMid   = coords.length>2 ? `<text x="${coords[Math.floor(coords.length/2)].x.toFixed(1)}" y="${(PT+cH+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="#9ca3af">${coords[Math.floor(coords.length/2)].label}</text>` : '';
-  const yTop = `<text x="${PL-3}" y="${(PT+5).toFixed(1)}" text-anchor="end" font-size="8" fill="#9ca3af">${maxV.toFixed(1)}</text>`;
-  const yBot = `<text x="${PL-3}" y="${(PT+cH).toFixed(1)}" text-anchor="end" font-size="8" fill="#9ca3af">${minV.toFixed(1)}</text>`;
-  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible;display:block">
-    <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="${color}" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-    </linearGradient></defs>
-    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+cH}" stroke="#e5e7eb" stroke-width="1"/>
-    <line x1="${PL}" y1="${PT+cH}" x2="${W-PR}" y2="${PT+cH}" stroke="#e5e7eb" stroke-width="1"/>
-    ${yTop}${yBot}
-    <path d="${areaPath}" fill="url(#${gradId})"/>
-    <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    ${dotsSvg}
-    ${lblFirst}${lblLast}${lblMid}
-  </svg>`;
-}
-
 function renderTabResultados(p) {
   const res = p.resultados || [];
-  // Chronological order for charts; newest-first for list
-  const chronoAsc  = [...res].filter(r=>r.peso).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  const imcAsc     = [...res].filter(r=>r.peso&&r.altura).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  const sortedDesc = [...res].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const sorted = [...res].sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
   const d = p.datos_personales;
 
-  const last   = sortedDesc[0];
+  // Usar el registro más reciente para el gauge
+  const last = sorted[0];
   const pesoVal = parseFloat(last?.peso || d.peso || 0);
   const altVal  = parseFloat(last?.altura || d.altura || 0);
-  const imcVal  = calcImcImperial(pesoVal, altVal);
+  const imcVal  = (pesoVal && altVal) ? parseFloat((pesoVal / Math.pow(altVal/100, 2)).toFixed(1)) : null;
 
-  // ── IMC gauge ──
   const gaugeHtml = imcVal ? `
     <div class="imc-gauge-card">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant);margin-bottom:10px">📊 Estado Actual · ${pesoVal} lb · ${totalInToFtIn(altVal)}</div>
-      <div class="imc-gauge-row">${buildImcGauge(imcVal, pesoVal, altVal, d.sexo)}</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant);margin-bottom:10px">📊 Estado Actual · ${pesoVal} kg · ${altVal} cm</div>
+      <div class="imc-gauge-row">
+        ${buildImcGauge(imcVal, pesoVal, altVal, d.sexo)}
+      </div>
     </div>` : '';
-
-  // ── Weight chart ──
-  let pesoChartHtml = '';
-  if (chronoAsc.length >= 2) {
-    const ptsPeso = chronoAsc.map(r=>({ v: parseFloat(parseFloat(r.peso).toFixed(1)), label: _fmtShort(r.fecha) }));
-    const first = ptsPeso[0].v, curr = ptsPeso[ptsPeso.length-1].v;
-    const diff = +(curr - first).toFixed(1);
-    const diffColor = diff < 0 ? '#059669' : diff > 0 ? '#dc2626' : '#6b7280';
-    const diffSign  = diff > 0 ? '+' : '';
-    pesoChartHtml = `
-      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:10px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#3b82f6;margin-bottom:8px">⚖️ Historial de Peso</div>
-        ${_buildTrendChart(ptsPeso,'#3b82f6','gradPeso','kg')}
-        <div style="font-size:11px;color:var(--gray-500);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
-          <span>Inicio: <strong style="color:var(--gray-700)">${first} kg</strong></span>
-          <span>Actual: <strong style="color:#3b82f6">${curr} kg</strong></span>
-          <span>Cambio: <strong style="color:${diffColor}">${diffSign}${diff} kg</strong></span>
-          <span>Registros: <strong>${ptsPeso.length}</strong></span>
-        </div>
-      </div>`;
-  }
-
-  // ── IMC chart ──
-  let imcChartHtml = '';
-  if (imcAsc.length >= 2) {
-    const ptsImc = imcAsc.map(r=>{
-      const imc = r.imc || calcImcImperial(r.peso, r.altura);
-      return { v: imc, label: _fmtShort(r.fecha) };
-    });
-    const firstImc = ptsImc[0].v, currImc = ptsImc[ptsImc.length-1].v;
-    const diffImc = +(currImc - firstImc).toFixed(1);
-    const diffImcColor = diffImc < 0 ? '#059669' : diffImc > 0 ? '#dc2626' : '#6b7280';
-    const diffImcSign  = diffImc > 0 ? '+' : '';
-    const imcCat = currImc<18.5?{l:'Bajo peso',c:'#2563eb'}:currImc<25?{l:'Normal',c:'#059669'}:currImc<30?{l:'Sobrepeso',c:'#d97706'}:currImc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
-    imcChartHtml = `
-      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:10px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8b5cf6;margin-bottom:8px">📉 Historial de IMC</div>
-        ${_buildTrendChart(ptsImc,'#8b5cf6','gradImc','')}
-        <div style="font-size:11px;color:var(--gray-500);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
-          <span>Inicio: <strong style="color:var(--gray-700)">${firstImc}</strong></span>
-          <span>Actual: <strong style="color:${imcCat.c}">${currImc} — ${imcCat.l}</strong></span>
-          <span>Cambio: <strong style="color:${diffImcColor}">${diffImcSign}${diffImc}</strong></span>
-        </div>
-      </div>`;
-  }
-
-  // ── Grasa % chart ──
-  const grasaAsc = [...res].filter(r=>r.grasa_pct).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  let grasaChartHtml = '';
-  if (grasaAsc.length >= 2) {
-    const pts = grasaAsc.map(r=>({ v: parseFloat(parseFloat(r.grasa_pct).toFixed(1)), label: _fmtShort(r.fecha) }));
-    const first = pts[0].v, curr = pts[pts.length-1].v;
-    const diff = +(curr - first).toFixed(1);
-    const col  = diff < 0 ? '#059669' : diff > 0 ? '#dc2626' : '#6b7280';
-    grasaChartHtml = `
-      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:10px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#f97316;margin-bottom:8px">🔥 Historial % Grasa Corporal</div>
-        ${_buildTrendChart(pts,'#f97316','gradGrasa','%')}
-        <div style="font-size:11px;color:var(--gray-500);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
-          <span>Inicio: <strong style="color:var(--gray-700)">${first}%</strong></span>
-          <span>Actual: <strong style="color:#f97316">${curr}%</strong></span>
-          <span>Cambio: <strong style="color:${col}">${diff>0?'+':''}${diff}%</strong></span>
-        </div>
-      </div>`;
-  }
-
-  // ── Músculo % chart ──
-  const musculoAsc = [...res].filter(r=>r.musculo_pct).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  let musculoChartHtml = '';
-  if (musculoAsc.length >= 2) {
-    const pts = musculoAsc.map(r=>({ v: parseFloat(parseFloat(r.musculo_pct).toFixed(1)), label: _fmtShort(r.fecha) }));
-    const first = pts[0].v, curr = pts[pts.length-1].v;
-    const diff = +(curr - first).toFixed(1);
-    const col  = diff > 0 ? '#059669' : diff < 0 ? '#dc2626' : '#6b7280';
-    musculoChartHtml = `
-      <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:12px 12px 6px;margin-bottom:14px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#06b6d4;margin-bottom:8px">💪 Historial % Masa Muscular</div>
-        ${_buildTrendChart(pts,'#06b6d4','gradMusculo','%')}
-        <div style="font-size:11px;color:var(--gray-500);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
-          <span>Inicio: <strong style="color:var(--gray-700)">${first}%</strong></span>
-          <span>Actual: <strong style="color:#06b6d4">${curr}%</strong></span>
-          <span>Cambio: <strong style="color:${col}">${diff>0?'+':''}${diff}%</strong></span>
-        </div>
-      </div>`;
-  }
-
-  // ── List with trend deltas ──
-  const listHtml = sortedDesc.map((r, listIdx) => {
-    const origI = res.indexOf(r);
-    const rImc = r.imc || calcImcImperial(r.peso, r.altura);
-    const prevR = sortedDesc[listIdx + 1];
-    function _delta(curr, prev, unit, lowerIsBetter) {
-      if (!curr || !prev) return '';
-      const d = +(parseFloat(curr) - parseFloat(prev)).toFixed(1);
-      const better = lowerIsBetter ? d < 0 : d > 0;
-      const arrow = d < 0 ? '↓' : d > 0 ? '↑' : '→';
-      const col   = d === 0 ? '#6b7280' : better ? '#059669' : '#dc2626';
-      return `<span style="font-size:11px;font-weight:700;color:${col};margin-left:4px">${arrow} ${d>0?'+':''}${d}${unit}</span>`;
-    }
-    const deltaPeso    = _delta(r.peso,      prevR?.peso,       ' lb', true);
-    const deltaImc     = _delta(rImc,         prevR ? (prevR.imc||(prevR.peso&&prevR.altura?parseFloat((parseFloat(prevR.peso)/Math.pow(parseFloat(prevR.altura)/100,2)).toFixed(1)):null)) : null, '', true);
-    const deltaGrasa   = _delta(r.grasa_pct,  prevR?.grasa_pct,  '%',  true);
-    const deltaMusculo = _delta(r.musculo_pct, prevR?.musculo_pct,'%',  false);
-    return `<div class="resultado-item">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="font-weight:700;color:var(--primary)">📅 ${formatDate(r.fecha)}</div>
-        <div style="display:flex;gap:5px">
-          <button class="btn btn-outline btn-sm" onclick="openModalResultado('${p.id}',${origI})">✏️</button>
-          <button class="btn btn-outline btn-sm" onclick="eliminarResultado('${p.id}',${origI})">🗑️</button>
-        </div>
-      </div>
-      <div class="resultado-grid">
-        ${r.peso        ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} lb${deltaPeso}</div></div>` : ''}
-        ${r.altura      ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${totalInToFtIn(r.altura)}</div></div>` : ''}
-        ${rImc          ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}${deltaImc}</div></div>` : ''}
-        ${r.grasa_pct   ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">% Grasa</div><div style="font-weight:800;font-size:16px;color:#f97316">${r.grasa_pct}%${deltaGrasa}</div></div>` : ''}
-        ${r.musculo_pct ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">% Músculo</div><div style="font-weight:800;font-size:16px;color:#06b6d4">${r.musculo_pct}%${deltaMusculo}</div></div>` : ''}
-        ${r.tension     ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Tensión</div><div style="font-weight:600">${r.tension}</div></div>` : ''}
-        ${r.glucemia    ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Glucemia</div><div style="font-weight:600">${r.glucemia}</div></div>` : ''}
-      </div>
-      ${r.laboratorios  ? `<div style="margin-top:8px;font-size:12.5px"><strong>🧪 Laboratorios:</strong> ${esc(r.laboratorios)}</div>` : ''}
-      ${r.observaciones ? `<div style="margin-top:6px;font-size:12.5px;color:var(--gray-500)">${esc(r.observaciones)}</div>` : ''}
-    </div>`;
-  }).join('');
 
   return `
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
       <button class="btn btn-primary" onclick="openModalResultado('${p.id}',null)">➕ Nuevo Registro</button>
     </div>
     ${gaugeHtml}
-    ${pesoChartHtml}
-    ${imcChartHtml}
-    ${grasaChartHtml}
-    ${musculoChartHtml}
-    ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Registrá peso, grasa y músculo para ver el historial</p></div>` : ''}
-    ${listHtml}`;
+    ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Registrá el peso, laboratorios y observaciones</p></div>` : ''}
+    ${sorted.map(r => {
+      const origI = res.indexOf(r);
+      const rImc = r.imc || (r.peso && r.altura ? parseFloat((parseFloat(r.peso)/Math.pow(parseFloat(r.altura)/100,2)).toFixed(1)) : null);
+      return `<div class="resultado-item">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:700;color:var(--primary)">📅 ${formatDate(r.fecha)}</div>
+          <div style="display:flex;gap:5px">
+            <button class="btn btn-outline btn-sm" onclick="openModalResultado('${p.id}',${origI})">✏️</button>
+            <button class="btn btn-outline btn-sm" onclick="eliminarResultado('${p.id}',${origI})">🗑️</button>
+          </div>
+        </div>
+        <div class="resultado-grid">
+          ${r.peso     ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} kg</div></div>` : ''}
+          ${r.altura   ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${r.altura} cm</div></div>` : ''}
+          ${rImc       ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}</div></div>` : ''}
+          ${r.tension  ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Tensión</div><div style="font-weight:600">${r.tension}</div></div>` : ''}
+          ${r.glucemia ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Glucemia</div><div style="font-weight:600">${r.glucemia}</div></div>` : ''}
+        </div>
+        ${r.laboratorios  ? `<div style="margin-top:8px;font-size:12.5px"><strong>🧪 Laboratorios:</strong> ${esc(r.laboratorios)}</div>` : ''}
+        ${r.observaciones ? `<div style="margin-top:6px;font-size:12.5px;color:var(--gray-500)">${esc(r.observaciones)}</div>` : ''}
+      </div>`;
+    }).join('')}`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1952,13 +1728,8 @@ function renderFormPaciente(el, id) {
             <div class="form-group"><label>Teléfono</label><input type="tel" name="telefono" value="${esc(d.telefono||'')}" placeholder="Ej: 11 1234-5678"></div>
             <div class="form-group"><label>Email</label><input type="email" name="email" value="${esc(d.email||'')}" placeholder="Ej: maria@email.com"></div>
             <div class="form-group"><label>Ciudad</label><input type="text" name="ciudad" value="${esc(d.ciudad||'')}" placeholder="Ej: Buenos Aires"></div>
-            <div class="form-group"><label>Peso (lb)</label><input type="number" step="0.1" name="peso" value="${esc(d.peso||'')}" placeholder="Ej: 145"></div>
-            <div class="form-group"><label>Altura (pie + pulgadas)</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-                <input type="number" name="altura_ft" step="1" min="0" value="${esc(String(Math.floor((parseFloat(d.altura)||0)/12)||''))}" placeholder="Pies (5)">
-                <input type="number" name="altura_in" step="0.5" min="0" max="11.9" value="${esc(String(+(((parseFloat(d.altura)||0)%12).toFixed(1))||''))}" placeholder="Pulg (6)">
-              </div>
-            </div>
+            <div class="form-group"><label>Peso actual (kg)</label><input type="number" step="0.1" name="peso" value="${esc(d.peso||'')}" placeholder="Ej: 65.5"></div>
+            <div class="form-group"><label>Altura (cm)</label><input type="number" name="altura" value="${esc(d.altura||'')}" placeholder="Ej: 165"></div>
           </div>
           <div class="form-group" style="margin-top:14px">
             <label>Antecedentes clínicos / Observaciones generales</label>
@@ -1983,9 +1754,7 @@ function guardarPaciente(e, id) {
     nombre:g('nombre'), apellido:g('apellido'), dni:g('dni'),
     fecha_nacimiento:g('fecha_nacimiento'), sexo:g('sexo'),
     ocupacion:g('ocupacion'), telefono:g('telefono'), email:g('email'),
-    ciudad:g('ciudad'), peso:g('peso'),
-    altura: String(+(parseFloat(g('altura_ft')||0)*12 + parseFloat(g('altura_in')||0)).toFixed(1) || ''),
-    antecedentes:g('antecedentes')
+    ciudad:g('ciudad'), peso:g('peso'), altura:g('altura'), antecedentes:g('antecedentes')
   };
   savePaciente(p);
   showToast('✅ Paciente guardado correctamente', 'success');
@@ -2049,12 +1818,6 @@ function confirmarCopiarProtocolo(destId) {
 }
 
 // — Modal Péptido —
-function toggleMotivoSusp() {
-  const v = document.getElementById('m-activo')?.value;
-  const row = document.getElementById('motivo-susp-row');
-  if (row) row.style.display = v === 'suspendido' ? '' : 'none';
-}
-
 function openModalPeptido(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   const prot = idx !== null ? p.protocolo_peptidos[idx] : null;
@@ -2095,16 +1858,11 @@ function openModalPeptido(pacienteId, idx) {
         <div class="form-group"><label>Fecha de inicio</label><input type="date" id="m-fecha-inicio" value="${prot?.fecha_inicio||''}"></div>
         <div class="form-group"><label>Fecha de fin (opcional)</label><input type="date" id="m-fecha-fin" value="${prot?.fecha_fin||''}"></div>
         <div class="form-group"><label>Estado</label>
-          <select id="m-activo" onchange="toggleMotivoSusp()">
-            <option value="activo"     ${(prot===null||getPeptidoEstado(prot||{})==='activo')?'selected':''}>Activo</option>
-            <option value="suspendido" ${getPeptidoEstado(prot||{})==='suspendido'?'selected':''}>⏸ Suspendido</option>
-            <option value="finalizado" ${getPeptidoEstado(prot||{})==='finalizado'?'selected':''}>Finalizado</option>
+          <select id="m-activo">
+            <option value="true"  ${(prot===null||prot?.activo)?'selected':''}>Activo</option>
+            <option value="false" ${prot?.activo===false?'selected':''}>Finalizado</option>
           </select>
         </div>
-      </div>
-      <div id="motivo-susp-row" class="form-group" style="margin-top:8px;${getPeptidoEstado(prot||{})!=='suspendido'?'display:none':''}">
-        <label>Motivo de suspensión</label>
-        <input type="text" id="m-motivo-susp" value="${esc(prot?.motivo_suspension||'')}" placeholder="Ej: efectos secundarios, costo, decisión del paciente...">
       </div>
       <div class="form-group" style="margin-top:12px">
         <label>Notas adicionales</label>
@@ -2132,9 +1890,7 @@ function guardarPeptido(pacienteId, idx) {
     objetivo:document.getElementById('m-objetivo').value,
     fecha_inicio:document.getElementById('m-fecha-inicio').value,
     fecha_fin:document.getElementById('m-fecha-fin').value,
-    estado:document.getElementById('m-activo').value,
-    activo:document.getElementById('m-activo').value === 'activo',
-    motivo_suspension:document.getElementById('m-motivo-susp')?.value||'',
+    activo:document.getElementById('m-activo').value === 'true',
     notas:document.getElementById('m-notas').value,
   };
   if (idx !== null) p.protocolo_peptidos[idx] = data; else p.protocolo_peptidos.push(data);
@@ -2149,67 +1905,7 @@ async function eliminarPeptido(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   p.protocolo_peptidos.splice(idx, 1);
   savePaciente(p); showToast('Péptido eliminado');
-  profileTab = 'peptidos'; navigate('perfil', pacienteId);
-}
-
-function getPeptidoEstado(prot) {
-  if (prot.estado) return prot.estado;
-  return prot.activo ? 'activo' : 'finalizado';
-}
-
-async function suspenderPeptido(pacienteId, idx) {
-  const p = getPaciente(pacienteId);
-  const prot = p.protocolo_peptidos[idx];
-  openModal(`<div class="modal">
-    <div class="modal-header">
-      <h3>⏸ Suspender — ${esc(prot.peptido)}</h3>
-      <button class="close-btn" onclick="closeModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Motivo de suspensión</label>
-        <input type="text" id="susp-motivo" placeholder="Ej: efectos secundarios, costo, decisión del paciente..." style="width:100%">
-      </div>
-      <div class="form-group">
-        <label>Fecha de suspensión</label>
-        <input type="date" id="susp-fecha" value="${new Date().toISOString().split('T')[0]}">
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-danger" onclick="confirmarSuspension('${pacienteId}',${idx})">⏸ Confirmar suspensión</button>
-    </div>
-  </div>`);
-}
-
-function confirmarSuspension(pacienteId, idx) {
-  const motivo = document.getElementById('susp-motivo').value.trim();
-  const fecha  = document.getElementById('susp-fecha').value;
-  const p = getPaciente(pacienteId);
-  p.protocolo_peptidos[idx] = {
-    ...p.protocolo_peptidos[idx],
-    estado: 'suspendido',
-    activo: false,
-    fecha_fin: fecha,
-    motivo_suspension: motivo,
-  };
-  savePaciente(p); closeModal();
-  showToast('⏸ Tratamiento suspendido', 'success');
-  profileTab = 'peptidos'; navigate('perfil', pacienteId);
-}
-
-async function reactivarPeptido(pacienteId, idx) {
-  const p = getPaciente(pacienteId);
-  p.protocolo_peptidos[idx] = {
-    ...p.protocolo_peptidos[idx],
-    estado: 'activo',
-    activo: true,
-    fecha_fin: '',
-    motivo_suspension: '',
-  };
-  savePaciente(p);
-  showToast('✅ Péptido reactivado', 'success');
-  profileTab = 'peptidos'; navigate('perfil', pacienteId);
+  navigate('perfil', pacienteId);
 }
 
 // — Modal Consulta —
@@ -2338,9 +2034,9 @@ function openModalResultado(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   const r = idx !== null ? p.resultados[idx] : null;
   const d = p.datos_personales;
-  const altDefault = r?.altura || d.altura || '';
-  const { ft: altFt, inch: altIn } = splitInches(altDefault);
-  const pesoDefault = r?.peso || '';
+  // Pre-fill altura from patient data or previous record
+  const alturaDefault = r?.altura || d.altura || '';
+  const pesoDefault   = r?.peso   || '';
   openModal(`<div class="modal">
     <div class="modal-header">
       <h3>📈 ${r ? 'Editar Registro' : 'Nuevo Registro de Evolución'}</h3>
@@ -2350,15 +2046,12 @@ function openModalResultado(pacienteId, idx) {
       <div class="form-grid">
         <div class="form-group"><label>Fecha *</label><input type="date" id="r-fecha" value="${r?.fecha||new Date().toISOString().split('T')[0]}"></div>
         <div class="form-group">
-          <label>Peso (lb)</label>
-          <input type="number" step="0.1" id="r-peso" value="${esc(String(r?.peso||pesoDefault))}" placeholder="Ej: 145" oninput="calcImcModal()">
+          <label>Peso (kg)</label>
+          <input type="number" step="0.1" id="r-peso" value="${esc(String(r?.peso||pesoDefault))}" placeholder="Ej: 65.5" oninput="calcImcModal()">
         </div>
         <div class="form-group">
-          <label>Altura (pie + pulgadas)</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-            <input type="number" step="1" min="0" id="r-altura-ft" value="${altDefault ? altFt : ''}" placeholder="Pies (5)" oninput="calcImcModal()">
-            <input type="number" step="0.5" min="0" max="11.9" id="r-altura-in" value="${altDefault ? altIn : ''}" placeholder="Pulg (6)" oninput="calcImcModal()">
-          </div>
+          <label>Altura (cm)</label>
+          <input type="number" step="1" id="r-altura" value="${esc(String(alturaDefault))}" placeholder="Ej: 165" oninput="calcImcModal()">
         </div>
         <div class="form-group">
           <label>IMC <span style="font-size:10px;color:var(--gray-400)">(calculado automático)</span></label>
@@ -2366,14 +2059,6 @@ function openModalResultado(pacienteId, idx) {
         </div>
         <div class="form-group"><label>Tensión arterial</label><input type="text" id="r-tension" value="${esc(r?.tension||'')}" placeholder="Ej: 120/80"></div>
         <div class="form-group"><label>Glucemia (mg/dL)</label><input type="text" id="r-glucemia" value="${esc(r?.glucemia||'')}" placeholder="Ej: 95"></div>
-        <div class="form-group">
-          <label>% Grasa corporal</label>
-          <input type="number" step="0.1" id="r-grasa" value="${esc(String(r?.grasa_pct||''))}" placeholder="Ej: 28.5">
-        </div>
-        <div class="form-group">
-          <label>% Masa muscular</label>
-          <input type="number" step="0.1" id="r-musculo" value="${esc(String(r?.musculo_pct||''))}" placeholder="Ej: 35.2">
-        </div>
       </div>
       <!-- IMC preview -->
       <div id="imc-preview" style="margin:8px 0 4px;min-height:24px"></div>
@@ -2389,14 +2074,12 @@ function openModalResultado(pacienteId, idx) {
 }
 
 function calcImcModal() {
-  const lbs  = parseFloat(document.getElementById('r-peso')?.value);
-  const ft   = parseFloat(document.getElementById('r-altura-ft')?.value) || 0;
-  const inc  = parseFloat(document.getElementById('r-altura-in')?.value) || 0;
-  const totalIn = ft * 12 + inc;
+  const peso = parseFloat(document.getElementById('r-peso')?.value);
+  const alt  = parseFloat(document.getElementById('r-altura')?.value);
   const imcEl = document.getElementById('r-imc');
   const prev  = document.getElementById('imc-preview');
-  const imc   = calcImcImperial(lbs, totalIn);
-  if (imc && imcEl) {
+  if (peso && alt && alt > 0 && imcEl) {
+    const imc = +(peso / Math.pow(alt/100, 2)).toFixed(1);
     imcEl.value = imc;
     const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
     if (prev) prev.innerHTML = `<span style="font-weight:700;font-size:15px;color:${cat.c}">${imc}</span> <span style="font-size:12px;color:${cat.c}">${cat.l}</span>`;
@@ -2411,9 +2094,8 @@ function guardarResultado(pacienteId, idx) {
   if (!fecha) { showToast('Ingresá la fecha', 'error'); return; }
   const p = getPaciente(pacienteId);
   const peso = document.getElementById('r-peso').value;
-  const altFt = parseFloat(document.getElementById('r-altura-ft')?.value) || 0;
-  const altIn = parseFloat(document.getElementById('r-altura-in')?.value) || 0;
-  const altura = altFt || altIn ? String(+(altFt*12 + altIn).toFixed(1)) : '';
+  const altura = document.getElementById('r-altura').value;
+  // Auto-update patient altura if provided
   if (altura && !p.datos_personales.altura) {
     p.datos_personales.altura = altura;
   }
@@ -2421,8 +2103,6 @@ function guardarResultado(pacienteId, idx) {
     fecha, peso, altura, imc: document.getElementById('r-imc').value,
     tension: document.getElementById('r-tension').value,
     glucemia: document.getElementById('r-glucemia').value,
-    grasa_pct: document.getElementById('r-grasa').value,
-    musculo_pct: document.getElementById('r-musculo').value,
     laboratorios: document.getElementById('r-laboratorios').value,
     observaciones: document.getElementById('r-observaciones').value,
   };
@@ -2533,17 +2213,8 @@ function eliminarPaciente(id) {
 // ═══════════════════════════════════════════════════
 function renderImportar(el) {
   el.innerHTML = `<div style="max-width:700px;margin:0 auto">
-    <div class="card" style="margin-bottom:20px;border:2px solid var(--primary-light)">
-      <div class="card-title">🔄 Restaurar backup completo (.json)</div>
-      <p style="font-size:13.5px;color:var(--gray-500);margin-bottom:16px">Restaurá un backup JSON completo, o descargá el backup actual de este dispositivo.</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-        <button class="btn btn-primary" onclick="exportarBackupJSON()">⬇️ Descargar backup actual</button>
-        <label class="btn btn-outline" style="cursor:pointer">📂 Restaurar desde archivo JSON<input type="file" accept=".json" class="hidden" onchange="importarBackupJSON(this.files[0])"></label>
-      </div>
-      <p style="font-size:12px;color:var(--gray-400)">El backup JSON incluye todos los pacientes, historial de consultas y compras de inventario.</p>
-    </div>
     <div class="card" style="margin-bottom:20px">
-      <div class="card-title">📥 Importar pacientes desde Excel (.xlsx)</div>
+      <div class="card-title">📥 Importar pacientes desde Excel</div>
       <p style="font-size:13.5px;color:var(--gray-500);margin-bottom:16px">Subí tu archivo Excel. La app leerá la primera hoja y te mostrará una vista previa antes de importar.</p>
       <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
         <div class="icon">📂</div>
@@ -2582,16 +2253,11 @@ function renderImportPreview(rows) {
   const cols = Object.keys(rows[0]);
   const autoMap = {
     nombre:['nombre','name','firstname','first_name'], apellido:['apellido','surname','lastname','last_name'],
-    dni:['dni','documento','id','cedula','rut'], fecha_nacimiento:['fecha nacimiento','fecha_nacimiento','birth','nacimiento','fecha nac'],
+    dni:['dni','documento','id','cedula','rut'], fecha_nacimiento:['fecha nacimiento','fecha_nacimiento','birth','nacimiento'],
     sexo:['sexo','genero','género','sex','gender'], telefono:['telefono','teléfono','phone','cel','celular'],
     email:['email','correo','mail'], ciudad:['ciudad','city','localidad'],
     peso:['peso','weight','kg'], altura:['altura','height','cm','talla'],
-    antecedentes:['antecedentes','medical history'],
-    peptido:['péptidos activos','peptidos activos','peptido','péptido','peptide','tratamiento'], dosis:['dosis','dose'],
-    frecuencia:['frecuencia','frequency'],
-    ultima_consulta:['última consulta','ultima consulta','last visit'],
-    proxima_consulta:['próxima consulta','proxima consulta','next visit'],
-    notas_consulta:['notas última consulta','notas ultima consulta','notas consulta','notas'],
+    peptido:['peptido','péptido','peptide','tratamiento'], dosis:['dosis','dose'],
   };
   document.getElementById('import-preview').innerHTML = `<div class="card">
     <div class="card-title">👁️ Vista Previa — ${rows.length} filas detectadas</div>
@@ -2607,7 +2273,7 @@ function renderImportPreview(rows) {
             <option value="dni">DNI</option><option value="fecha_nacimiento">Fecha Nacimiento</option>
             <option value="sexo">Sexo</option><option value="telefono">Teléfono</option>
             <option value="email">Email</option><option value="ciudad">Ciudad</option>
-            <option value="peso">Peso (lb)</option><option value="altura">Altura (pulgadas)</option>
+            <option value="peso">Peso (kg)</option><option value="altura">Altura (cm)</option>
             <option value="antecedentes">Antecedentes</option>
           </optgroup>
           <optgroup label="Péptido">
@@ -2650,23 +2316,12 @@ function ejecutarImport() {
   if (!Object.values(mapping).includes('nombre') && !Object.values(mapping).includes('apellido')) {
     showToast('Asigná al menos el campo Nombre o Apellido', 'error'); return;
   }
-  const DATE_FIELDS = new Set(['fecha_nacimiento','ultima_consulta','proxima_consulta','fecha_inicio']);
-  function _normalizeDate(v) {
-    if (!v && v !== 0) return '';
-    if (v instanceof Date) return v.toISOString().split('T')[0];
-    if (typeof v === 'number') return new Date(Math.round((v - 25569) * 86400000)).toISOString().split('T')[0];
-    const s = String(v).trim();
-    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : s;
-  }
   let imported = 0;
   importData.forEach(row => {
     const p = { id:newId(), datos_personales:{}, protocolo_peptidos:[], historial_consultas:[], resultados:[] };
     const dp={}, prot={}, cons={}; let hasProt=false, hasCons=false;
     for (const [col, field] of Object.entries(mapping)) {
-      const raw = row[col];
-      const val = DATE_FIELDS.has(field) ? _normalizeDate(raw) : String(raw||'').trim();
-      if (!val) continue;
+      const val = String(row[col]||'').trim(); if (!val) continue;
       if (['nombre','apellido','dni','fecha_nacimiento','sexo','telefono','email','ciudad','peso','altura','ocupacion','antecedentes'].includes(field)) dp[field] = val;
       else if (['peptido','dosis','frecuencia','via','objetivo','fecha_inicio'].includes(field)) { prot[field] = val; hasProt = true; }
       else if (['ultima_consulta','notas_consulta','proxima_consulta'].includes(field)) {
@@ -2686,53 +2341,11 @@ function ejecutarImport() {
 }
 
 // ═══════════════════════════════════════════════════
-//  BACKUP JSON — EXPORTAR / IMPORTAR
-// ═══════════════════════════════════════════════════
-function exportarBackupJSON() {
-  const payload = buildBackupPayload();
-  const blob = new Blob([payload], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `peptidos_backup_${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('Backup JSON descargado ✓', 'success');
-}
-
-async function importarBackupJSON(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (!data.pacientes || !Array.isArray(data.pacientes)) {
-        showToast('Archivo inválido — no es un backup de esta app', 'error'); return;
-      }
-      const ts = data.timestamp ? new Date(data.timestamp).toLocaleString('es', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '?';
-      const ok = await customConfirm(
-        '¿Restaurar backup?',
-        `Backup del ${ts}\n• ${data.pacientes.length} pacientes${data.compras?.length ? `\n• ${data.compras.length} frascos de inventario` : ''}\n\nEsto reemplazará TODOS los datos actuales.`,
-        true
-      );
-      if (!ok) return;
-      localStorage.setItem('peptidos_pacientes_v2', JSON.stringify(data.pacientes));
-      if (data.compras) localStorage.setItem('peptidos_compras_v1', JSON.stringify(data.compras));
-      showToast(`✅ Backup restaurado: ${data.pacientes.length} pacientes`, 'success');
-      navigate('pacientes');
-    } catch(err) { showToast('Error al leer el backup: ' + err.message, 'error'); }
-  };
-  reader.readAsText(file);
-}
-
-// ═══════════════════════════════════════════════════
 //  EXPORTAR EXCEL
 // ═══════════════════════════════════════════════════
 function exportarExcel() {
   const db = getDB();
   if (!db.length) { showToast('No hay pacientes para exportar', 'error'); return; }
-
-  // Sheet 1: Pacientes (summary)
   const rows = db.map(p => {
     const d = p.datos_personales;
     const prots = p.protocolo_peptidos||[], cons = p.historial_consultas||[], res = p.resultados||[];
@@ -2742,53 +2355,21 @@ function exportarExcel() {
       'Nombre':d.nombre||'', 'Apellido':d.apellido||'', 'DNI':d.dni||'',
       'Fecha Nac.':d.fecha_nacimiento||'', 'Sexo':d.sexo||'',
       'Teléfono':d.telefono||'', 'Email':d.email||'', 'Ciudad':d.ciudad||'',
-      'Peso (lb)':d.peso||'', 'Altura':totalInToFtIn(d.altura),
+      'Peso (kg)':d.peso||'', 'Altura (cm)':d.altura||'',
       'Péptidos Activos':prots.filter(x=>x.activo).map(x=>x.peptido).join(', '),
       'Dosis':prots.filter(x=>x.activo).map(x=>x.dosis).join(', '),
       'Frecuencia':prots.filter(x=>x.activo).map(x=>x.frecuencia).join(', '),
       'Última Consulta':lastCon.fecha||'', 'Notas':lastCon.notas||'',
       'Próxima Consulta':lastCon.proxima_consulta||'',
-      'Último Peso (lb)':lastRes.peso||'', 'Último Lab.':lastRes.laboratorios||'',
+      'Último Peso':lastRes.peso||'', 'Último Lab.':lastRes.laboratorios||'',
       'Observaciones':lastRes.observaciones||'', 'Antecedentes':d.antecedentes||'',
     };
   });
-
-  // Sheet 2: Historial (one row per consultation)
-  const historialRows = [];
-  db.forEach(p => {
-    const nombre = `${p.datos_personales.nombre||''} ${p.datos_personales.apellido||''}`.trim();
-    (p.historial_consultas||[]).forEach(c => {
-      const pago = getConsultaPayment(c);
-      historialRows.push({
-        'Paciente': nombre,
-        'Fecha': c.fecha||'',
-        'Notas': c.notas||'',
-        'Monto': pago.monto||'',
-        'Estado Pago': pago.estado_pago||'',
-        'Monto Pendiente': pago.monto_pendiente||'',
-        'Próxima Consulta': c.proxima_consulta||''
-      });
-    });
-  });
-
-  // Sheet 3: Inventario (compras)
-  const compras = getCompras();
-  const inventarioRows = compras.map(c => ({
-    'Péptido': c.peptido||'',
-    'mg': c.mg||'',
-    'Fecha Adquisición': c.fecha_adquisicion||'',
-    'Fecha Vencimiento': c.fecha_vencimiento||'',
-    'Costo Total': c.costo_total||'',
-    'Cortesía Suplidor': c.cortesia_suplidor ? 'Sí' : 'No',
-    'Notas': c.notas||''
-  }));
-
+  const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Pacientes');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(historialRows.length ? historialRows : [{'Paciente':'','Fecha':'','Notas':'','Monto':'','Estado Pago':'','Monto Pendiente':'','Próxima Consulta':''}]), 'Historial');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inventarioRows.length ? inventarioRows : [{'Péptido':'','mg':'','Fecha Adquisición':'','Fecha Vencimiento':'','Costo Total':'','Cortesía Suplidor':'','Notas':''}]), 'Inventario');
+  XLSX.utils.book_append_sheet(wb, ws, 'Pacientes');
   XLSX.writeFile(wb, `pacientes_peptidos_${new Date().toISOString().split('T')[0]}.xlsx`);
-  showToast('📥 Excel exportado correctamente (3 hojas)', 'success');
+  showToast('📥 Excel exportado correctamente', 'success');
 }
 
 // ═══════════════════════════════════════════════════
@@ -2813,22 +2394,6 @@ function calcEdad(fechaNac) {
     return edad + ' años';
   } catch { return '—'; }
 }
-function lbsToKg(lb) { return lb * 0.453592; }
-function inToM(inches) { return inches * 0.0254; }
-function totalInToFtIn(totalIn) {
-  const n = parseFloat(totalIn);
-  if (!n || isNaN(n) || n <= 0) return '—';
-  return `${Math.floor(n/12)}'${Math.round(n%12)}"`;
-}
-function calcImcImperial(lbs, totalInches) {
-  if (!lbs || !totalInches || totalInches <= 0) return null;
-  return +(lbsToKg(parseFloat(lbs)) / Math.pow(inToM(parseFloat(totalInches)), 2)).toFixed(1);
-}
-function splitInches(totalIn) {
-  const n = parseFloat(totalIn) || 0;
-  return { ft: Math.floor(n/12), inch: +(n%12).toFixed(1) };
-}
-
 let toastTimer = null;
 function showToast(msg, type) {
   const t = document.getElementById('toast');
@@ -3049,14 +2614,9 @@ function aiQuery(q) {
 //  SEED INICIAL
 // ═══════════════════════════════════════════════════
 (function seedInitialData() {
-  const SEED_KEY = 'peptidos_seeded_v3';
+  const SEED_KEY = 'peptidos_seeded_v2';
   if (localStorage.getItem(SEED_KEY)) return;
-  // Si ya hay datos reales guardados, no sobreescribir — solo marcar como seeded
-  try {
-    const existing = JSON.parse(localStorage.getItem('peptidos_pacientes_v2') || '[]');
-    if (existing.length > 0) { localStorage.setItem(SEED_KEY, '1'); return; }
-  } catch(e) {}
-  const initial = [{"id":"e3n7pq4ss2eo","datos_personales":{"nombre":"Maria","apellido":"Frias","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-03-17","fecha_fin":"","activo":true,"notas":""},{"peptido":"Glow (GHK-Cu)","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-07","fecha_fin":"","activo":true,"notas":""},{"peptido":"Retatrutide 10mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-23","fecha_fin":"","activo":true,"notas":""}],"historial_consultas":[{"fecha":"2026-03-17","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2500 S","proxima_consulta":""},{"fecha":"2026-03-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2500 S","proxima_consulta":""},{"fecha":"2026-03-31","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2500 S","proxima_consulta":""},{"fecha":"2026-04-07","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + Glow | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-04-15","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + Glow | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-04-23","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10RT + Glow | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-04-30","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT+ glow | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-05-07","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10RT | Pago: 2,500 S","proxima_consulta":""},{"fecha":"2026-05-25","motivo":"Aplicación de péptidos","notas":"14 rt","proxima_consulta":""}],"resultados":[]},{"id":"n6uo81jm5xxh","datos_personales":{"nombre":"Carlos","apellido":"Salcedo","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-03-17","fecha_fin":"","activo":true,"notas":""}],"historial_consultas":[{"fecha":"2026-03-17","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-03-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-03-31","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-04-07","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""}],"resultados":[]},{"id":"5rq2p5y7y2bc","datos_personales":{"nombre":"Maria","apellido":"Guzman","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-03-17","fecha_fin":"","activo":true,"notas":""},{"peptido":"Retatrutide 10mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-22","fecha_fin":"","activo":true,"notas":""},{"peptido":"Glow (GHK-Cu)","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-28","fecha_fin":"","activo":true,"notas":""}],"historial_consultas":[{"fecha":"2026-03-17","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-03-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-03-31","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-04-07","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-04-15","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-04-22","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT | Pago: 7000 S","proxima_consulta":""},{"fecha":"2026-04-28","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10RT + glow | Pago: 7000 s/5,000 pend","proxima_consulta":""},{"fecha":"2026-05-06","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT | Pago: 7000 S","proxima_consulta":""},{"fecha":"2026-05-27","motivo":"Aplicación de péptidos","notas":"14 rt + 10 glow","proxima_consulta":""}],"resultados":[]},{"id":"uohobtp85yfh","datos_personales":{"nombre":"Clara","apellido":"Reyes","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-03-30","fecha_fin":"","activo":true,"notas":""},{"peptido":"Glow (GHK-Cu)","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-06","fecha_fin":"","activo":true,"notas":""},{"peptido":"Retatrutide 10mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-30","fecha_fin":"","activo":true,"notas":""},{"peptido":"MOTS-c","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-30","fecha_fin":"","activo":true,"notas":""},{"peptido":"DSIP","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-30","fecha_fin":"","activo":true,"notas":""}],"historial_consultas":[{"fecha":"2026-03-30","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2500 S","proxima_consulta":""},{"fecha":"2026-04-06","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + glow | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-04-14","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + glow | Pago: 5000(nadia)S","proxima_consulta":""},{"fecha":"2026-04-22","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + glow | Pago: 5,000 (pend)","proxima_consulta":""},{"fecha":"2026-04-30","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT+ glow+ 10 mots+10 dsip | Pago: 4,000 pend","proxima_consulta":""},{"fecha":"2026-05-08","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT+ glow+ 10 mots+10 dsip | Pago: 4,000 pend","proxima_consulta":""},{"fecha":"2026-05-29","motivo":"Aplicación de péptidos","notas":"14 rt + 10 glow + 10 dsip","proxima_consulta":""}],"resultados":[]},{"id":"em4ou1btr51t","datos_personales":{"nombre":"Michelle","apellido":"Olivo"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-10","activo":true}],"historial_consultas":[{"fecha":"2026-04-10","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"},{"fecha":"2026-04-23","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 saldo"},{"fecha":"2026-04-30","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 saldo"},{"fecha":"2026-05-21","motivo":"Aplicación de péptidos","notas":"10u Tirzepatide","proxima_consulta":""}],"resultados":[]},{"id":"q4cw4lz5n1kk","datos_personales":{"nombre":"Luis","apellido":"Pérez"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-11","activo":true},{"peptido":"Tirzepatida 10mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-05-05","activo":true}],"historial_consultas":[{"fecha":"2026-04-11","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2,500 S"},{"fecha":"2026-04-19","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2,500 S"},{"fecha":"2026-05-05","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 T | Pago: 2,500 S"},{"fecha":"2026-05-19","motivo":"Aplicación de péptidos","notas":"10u Tirzepatide","proxima_consulta":""}],"resultados":[]},{"id":"bad13xznlkbo","datos_personales":{"nombre":"Diana","apellido":"Garcia"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-11","activo":true},{"peptido":"Tirzepatida 10mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-05-01","activo":true}],"historial_consultas":[{"fecha":"2026-04-11","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S"},{"fecha":"2026-04-18","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S"},{"fecha":"2026-04-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"},{"fecha":"2026-05-01","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 T | Pago: 5,000 s"}],"resultados":[]},{"id":"ldnmxs8gu4ye","datos_personales":{"nombre":"Maria","apellido":"Santana"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-13","activo":true}],"historial_consultas":[{"fecha":"2026-04-13","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S"},{"fecha":"2026-04-18","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"},{"fecha":"2026-04-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"}],"resultados":[]},{"id":"pxg9zklguid8","datos_personales":{"nombre":"Lucia","apellido":"Rosario"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-13","activo":true},{"peptido":"Retatrutide 10mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-24","activo":true},{"peptido":"MOTS-c","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-24","activo":true}],"historial_consultas":[{"fecha":"2026-04-13","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S"},{"fecha":"2026-04-18","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"},{"fecha":"2026-04-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT+ 10 mots-c | Pago: 5,000 S"},{"fecha":"2026-05-01","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 rt + 10 mots-c | Pago: 7,000 saldo"}],"resultados":[]},{"id":"wi0wuh7crhbj","datos_personales":{"nombre":"Elias","apellido":"Souri"},"protocolo_peptidos":[{"peptido":"Glow (GHK-Cu)","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-16","activo":true}],"historial_consultas":[{"fecha":"2026-04-16","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: Glow | Pago: 2,500 saldo T"},{"fecha":"2026-04-20","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: Glow | Pago: 2,500 saldo"},{"fecha":"2026-04-28","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: Glow | Pago: 2500 pend"},{"fecha":"2026-05-04","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: glow | Pago: 2,500 pend"},{"fecha":"2026-05-13","motivo":"Aplicación de péptidos","notas":"Glow 10u","proxima_consulta":""}],"resultados":[]},{"id":"etoxu7n902dl","datos_personales":{"nombre":"Nadia","apellido":"Souri"},"protocolo_peptidos":[{"peptido":"Glow (GHK-Cu)","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-25","activo":true}],"historial_consultas":[{"fecha":"2026-04-25","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: glow | Pago: 2.500 s"},{"fecha":"2026-05-04","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: glow | Pago: 2,500 pend"}],"resultados":[]},{"id":"i7ug1okbmlsa","datos_personales":{"nombre":"Claudia","apellido":"Henriquez"},"protocolo_peptidos":[],"historial_consultas":[{"fecha":"2026-05-28","motivo":"Aplicación de péptidos","notas":"10 tirrzepatide","proxima_consulta":""}],"resultados":[]},{"id":"y2ml1lp7s4ou","datos_personales":{"nombre":"Yamilita","apellido":"Lopez Souri","dni":"","fecha_nacimiento":"1983-05-15","sexo":"Femenino","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Glow","frecuencia":"semanal","via":"Subcutánea","fecha_inicio":"2026-05-15","activo":true}],"historial_consultas":[{"fecha":"2026-05-15","motivo":"Aplicación de péptidos","notas":"10u Glow x4","proxima_consulta":""}],"resultados":[]},{"id":"s9d3sr7r2xy5","datos_personales":{"nombre":"Said","apellido":"Souri Reyes","dni":"","fecha_nacimiento":"1997-03-03","sexo":"Masculino","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Retatrutida","frecuencia":"semanal","via":"Subcutánea","fecha_inicio":"2026-05-28","activo":true},{"peptido":"Cagrilintide","frecuencia":"semanal","via":"Subcutánea","fecha_inicio":"2026-05-28","activo":true}],"historial_consultas":[{"fecha":"2026-05-28","motivo":"Aplicación de péptidos","notas":"14 rt + 10 cagri","proxima_consulta":""}],"resultados":[]},{"id":"t6fn8mg3z1aw","datos_personales":{"nombre":"Tiffany","apellido":"Maria Guzman","dni":"","fecha_nacimiento":"","sexo":"Femenino","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"GHK-CU","frecuencia":"semanal","via":"Subcutánea","fecha_inicio":"2026-05-25","activo":true}],"historial_consultas":[{"fecha":"2026-05-25","motivo":"Aplicación de péptidos","notas":"10 GHK-CU","proxima_consulta":""}],"resultados":[]},{"id":"r4h2gz9w5vbk","datos_personales":{"nombre":"Sarah","apellido":"Guzman","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":"tiroides"},"protocolo_peptidos":[{"peptido":"Tirzepatida","frecuencia":"semanal","via":"Subcutánea","fecha_inicio":"2026-05-25","activo":true},{"peptido":"GHK-CU","frecuencia":"semanal","via":"Subcutánea","fecha_inicio":"2026-05-25","activo":true}],"historial_consultas":[{"fecha":"2026-05-25","motivo":"Aplicación de péptidos","notas":"6 T + 10 GHK-CU","proxima_consulta":""}],"resultados":[]},{"id":"m8r3pd5l9nqe","datos_personales":{"nombre":"Mariela","apellido":"Perdomo","dni":"","fecha_nacimiento":"","sexo":"Femenino","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Tirzepatida","frecuencia":"semanal","via":"Subcutánea","fecha_inicio":"2026-05-28","activo":true}],"historial_consultas":[{"fecha":"2026-05-28","motivo":"Aplicación de péptidos","notas":"12 Tirzepatide","proxima_consulta":""}],"resultados":[]},{"id":"b5rm7rs2c4vf","datos_personales":{"nombre":"Bermis","apellido":"Rosario","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Glow","frecuencia":"semanal","via":"Subcutánea","fecha_inicio":"2026-05-29","activo":true}],"historial_consultas":[{"fecha":"2026-05-29","motivo":"Aplicación de péptidos","notas":"10 glow","proxima_consulta":""}],"resultados":[]}];
+  const initial = [{"id":"e3n7pq4ss2eo","datos_personales":{"nombre":"Maria","apellido":"Frias","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-03-17","fecha_fin":"","activo":true,"notas":""},{"peptido":"Glow (GHK-Cu)","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-07","fecha_fin":"","activo":true,"notas":""},{"peptido":"Retatrutide 10mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-23","fecha_fin":"","activo":true,"notas":""}],"historial_consultas":[{"fecha":"2026-03-17","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2500 S","proxima_consulta":""},{"fecha":"2026-03-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2500 S","proxima_consulta":""},{"fecha":"2026-03-31","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2500 S","proxima_consulta":""},{"fecha":"2026-04-07","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + Glow | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-04-15","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + Glow | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-04-23","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10RT + Glow | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-04-30","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT+ glow | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-05-07","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10RT | Pago: 2,500 S","proxima_consulta":""}],"resultados":[]},{"id":"n6uo81jm5xxh","datos_personales":{"nombre":"Carlos","apellido":"Salcedo","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-03-17","fecha_fin":"","activo":true,"notas":""}],"historial_consultas":[{"fecha":"2026-03-17","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-03-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-03-31","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-04-07","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""}],"resultados":[]},{"id":"5rq2p5y7y2bc","datos_personales":{"nombre":"Maria","apellido":"Guzman","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-03-17","fecha_fin":"","activo":true,"notas":""},{"peptido":"Retatrutide 10mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-22","fecha_fin":"","activo":true,"notas":""},{"peptido":"Glow (GHK-Cu)","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-28","fecha_fin":"","activo":true,"notas":""}],"historial_consultas":[{"fecha":"2026-03-17","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-03-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-03-31","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-04-07","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-04-15","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S","proxima_consulta":""},{"fecha":"2026-04-22","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT | Pago: 7000 S","proxima_consulta":""},{"fecha":"2026-04-28","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10RT + glow | Pago: 7000 s/5,000 pend","proxima_consulta":""},{"fecha":"2026-05-06","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT | Pago: 7000 S","proxima_consulta":""}],"resultados":[]},{"id":"uohobtp85yfh","datos_personales":{"nombre":"Clara","apellido":"Reyes","dni":"","fecha_nacimiento":"","sexo":"","ocupacion":"","telefono":"","email":"","ciudad":"","peso":"","altura":"","antecedentes":""},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-03-30","fecha_fin":"","activo":true,"notas":""},{"peptido":"Glow (GHK-Cu)","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-06","fecha_fin":"","activo":true,"notas":""},{"peptido":"Retatrutide 10mg","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-30","fecha_fin":"","activo":true,"notas":""},{"peptido":"MOTS-c","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-30","fecha_fin":"","activo":true,"notas":""},{"peptido":"DSIP","dosis":"","frecuencia":"Semanal","via":"Subcutánea","objetivo":"","fecha_inicio":"2026-04-30","fecha_fin":"","activo":true,"notas":""}],"historial_consultas":[{"fecha":"2026-03-30","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2500 S","proxima_consulta":""},{"fecha":"2026-04-06","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + glow | Pago: 5000 S","proxima_consulta":""},{"fecha":"2026-04-14","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + glow | Pago: 5000(nadia)S","proxima_consulta":""},{"fecha":"2026-04-22","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T + glow | Pago: 5,000 (pend)","proxima_consulta":""},{"fecha":"2026-04-30","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT+ glow+ 10 mots+10 dsip | Pago: 4,000 pend","proxima_consulta":""},{"fecha":"2026-05-08","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT+ glow+ 10 mots+10 dsip | Pago: 4,000 pend","proxima_consulta":""}],"resultados":[]},{"id":"em4ou1btr51t","datos_personales":{"nombre":"Michelle","apellido":"Olivo"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-10","activo":true}],"historial_consultas":[{"fecha":"2026-04-10","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"},{"fecha":"2026-04-23","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 saldo"},{"fecha":"2026-04-30","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 saldo"}],"resultados":[]},{"id":"q4cw4lz5n1kk","datos_personales":{"nombre":"Luis","apellido":"Pérez"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-11","activo":true},{"peptido":"Tirzepatida 10mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-05-05","activo":true}],"historial_consultas":[{"fecha":"2026-04-11","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2,500 S"},{"fecha":"2026-04-19","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 2,500 S"},{"fecha":"2026-05-05","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 T | Pago: 2,500 S"}],"resultados":[]},{"id":"bad13xznlkbo","datos_personales":{"nombre":"Diana","apellido":"Garcia"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-11","activo":true},{"peptido":"Tirzepatida 10mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-05-01","activo":true}],"historial_consultas":[{"fecha":"2026-04-11","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S"},{"fecha":"2026-04-18","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S"},{"fecha":"2026-04-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"},{"fecha":"2026-05-01","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 T | Pago: 5,000 s"}],"resultados":[]},{"id":"ldnmxs8gu4ye","datos_personales":{"nombre":"Maria","apellido":"Santana"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-13","activo":true}],"historial_consultas":[{"fecha":"2026-04-13","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S"},{"fecha":"2026-04-18","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"},{"fecha":"2026-04-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"}],"resultados":[]},{"id":"pxg9zklguid8","datos_personales":{"nombre":"Lucia","apellido":"Rosario"},"protocolo_peptidos":[{"peptido":"Tirzepatida 2.5mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-13","activo":true},{"peptido":"Retatrutide 10mg","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-24","activo":true},{"peptido":"MOTS-c","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-24","activo":true}],"historial_consultas":[{"fecha":"2026-04-13","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5000 S"},{"fecha":"2026-04-18","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 2.5 T | Pago: 5,000 S"},{"fecha":"2026-04-24","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 RT+ 10 mots-c | Pago: 5,000 S"},{"fecha":"2026-05-01","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: 10 rt + 10 mots-c | Pago: 7,000 saldo"}],"resultados":[]},{"id":"wi0wuh7crhbj","datos_personales":{"nombre":"Elias","apellido":"Souri"},"protocolo_peptidos":[{"peptido":"Glow (GHK-Cu)","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-16","activo":true}],"historial_consultas":[{"fecha":"2026-04-16","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: Glow | Pago: 2,500 saldo T"},{"fecha":"2026-04-20","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: Glow | Pago: 2,500 saldo"},{"fecha":"2026-04-28","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: Glow | Pago: 2500 pend"},{"fecha":"2026-05-04","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: glow | Pago: 2,500 pend"}],"resultados":[]},{"id":"etoxu7n902dl","datos_personales":{"nombre":"Nadia","apellido":"Souri"},"protocolo_peptidos":[{"peptido":"Glow (GHK-Cu)","frecuencia":"Semanal","via":"Subcutánea","fecha_inicio":"2026-04-25","activo":true}],"historial_consultas":[{"fecha":"2026-04-25","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: glow | Pago: 2.500 s"},{"fecha":"2026-05-04","motivo":"Aplicación de péptidos","notas":"Péptido/Dosis: glow | Pago: 2,500 pend"}],"resultados":[]},{"id":"i7ug1okbmlsa","datos_personales":{"nombre":"Claudia","apellido":"Henriquez"},"protocolo_peptidos":[],"historial_consultas":[],"resultados":[]}];
   localStorage.setItem('peptidos_pacientes_v2', JSON.stringify(initial));
   localStorage.setItem(SEED_KEY, '1');
 })();
@@ -3374,18 +2934,12 @@ const SYNC_LAST_KEY  = 'peptidos_last_sync';
 const GIST_FILENAME  = 'peptidos_backup.json';
 const GIST_DESC      = 'Peptidos-App-Backup';
 
-// ─── CREDENCIALES PRECARGADAS ───────────────────────────────
-// El token se eliminó del código fuente porque GitHub lo revoca
-// automáticamente cuando está expuesto en repositorios públicos.
-// Nadia debe generar su propio token en github.com/settings/tokens
-const _REVOKED_TOKEN  = 'ghp_MJRCHCDVbjM3WD9j9SrPgZFIX1xX8S3yxV0n';
+// ─── CREDENCIALES PRECARGADAS (sincronización automática) ───
+const _PRESET_TOKEN   = 'ghp_MJRCHCDVbjM3WD9j9SrPgZFIX1xX8S3yxV0n';
 const _PRESET_GIST_ID = 'efd5d0987a2eebaeb4a7b9eb3afb3059';
 (function _initPreset() {
-  // Limpiar el token revocado si alguien lo tiene guardado
-  if (localStorage.getItem(SYNC_TOKEN_KEY) === _REVOKED_TOKEN) {
-    localStorage.removeItem(SYNC_TOKEN_KEY);
-  }
-  if (!localStorage.getItem(SYNC_GIST_KEY)) localStorage.setItem(SYNC_GIST_KEY, _PRESET_GIST_ID);
+  if (!localStorage.getItem(SYNC_TOKEN_KEY))   localStorage.setItem(SYNC_TOKEN_KEY,   _PRESET_TOKEN);
+  if (!localStorage.getItem(SYNC_GIST_KEY))    localStorage.setItem(SYNC_GIST_KEY,    _PRESET_GIST_ID);
 })();
 // ────────────────────────────────────────────────────────────
 
@@ -3495,11 +3049,7 @@ async function ghFetch(path, options) {
     ...options,
     headers: { 'Authorization':'Bearer '+token, 'Content-Type':'application/json', 'Accept':'application/vnd.github+json', ...(options?.headers||{}) }
   });
-  if (!res.ok) {
-    const err = await res.json().catch(()=>({}));
-    if (res.status === 401) throw new Error('Token inválido o vencido — actualizá el token en ⚙️ Configuración');
-    throw new Error(err.message||`Error ${res.status}`);
-  }
+  if (!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.message||`Error ${res.status}`); }
   return res.json();
 }
 
@@ -3598,10 +3148,6 @@ function renderSync(el) {
 
 function renderSyncSetup(el) {
   el.innerHTML = `<div style="max-width:620px;margin:0 auto">
-    <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:var(--radius);padding:13px 16px;margin-bottom:16px;font-size:13px;color:#92400e">
-      <strong>⚠️ Necesitás configurar un nuevo token.</strong> El token anterior venció o fue revocado.
-      Seguí los pasos de abajo para generar uno nuevo — es gratis y tarda menos de 2 minutos.
-    </div>
     <div class="card">
       <div class="card-title">☁️ Configurar Sincronización Automática</div>
       <p style="font-size:13.5px;color:var(--gray-600);margin-bottom:16px;line-height:1.7">
@@ -3705,21 +3251,20 @@ function renderReferencia(el) {
         <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#e0f2fe,#bae6fd);display:inline-flex;align-items:center;justify-content:center;font-size:14px">🧮</span>
         Calculadora de Reconstitución
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:flex-end">
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end">
         <div class="form-group" style="margin-bottom:0">
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">mg del frasco</label>
-          <input type="number" id="calc-mg" step="0.5" min="0" placeholder="Ej: 10" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">Péptido (mg por vial)</label>
+          <input type="number" id="calc-mg" step="0.5" placeholder="Ej: 10" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">mL de agua</label>
-          <input type="number" id="calc-agua" step="0.5" min="0.1" placeholder="Ej: 2" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">Concentración deseada (mg/mL)</label>
+          <input type="number" id="calc-conc" step="0.1" placeholder="Ej: 2.5" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
         </div>
-        <div class="form-group" style="margin-bottom:0">
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--on-surface-variant)">Dosis deseada (mg)</label>
-          <input type="number" id="calc-dosis-mg" step="0.01" min="0" placeholder="Ej: 0.5" oninput="calcReconstitucion()" style="border-radius:var(--radius-sm)">
+        <div id="calc-result" style="padding:10px 16px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap;min-width:120px;text-align:center;height:42px;display:flex;align-items:center;justify-content:center">
+          — mL agua
         </div>
       </div>
-      <div id="calc-result" style="margin-top:12px"></div>
+      <div id="calc-detail" style="margin-top:10px;font-size:12px;color:var(--on-surface-variant)"></div>
     </div>
 
     <div class="card" style="padding:0">
@@ -3736,7 +3281,7 @@ function renderReferencia(el) {
           </tr></thead>
           <tbody>
             ${data.length ? data.map((item, i) => `
-              <tr style="cursor:pointer" onclick="document.getElementById('calc-mg').value='${parseFloat(item.presentacion)||''}';document.getElementById('calc-agua').value='${item.diluyente_ml||''}';calcReconstitucion();document.getElementById('calc-mg').scrollIntoView({behavior:'smooth',block:'center'})">
+              <tr style="cursor:pointer" onclick="document.getElementById('calc-mg').value='${parseFloat(item.presentacion)||''}';document.getElementById('calc-conc').value='${parseFloat(item.concentracion)||''}';calcReconstitucion();document.getElementById('calc-mg').scrollIntoView({behavior:'smooth',block:'center'})">
                 <td><strong>${esc(item.nombre)}</strong></td>
                 <td>${esc(item.presentacion)}</td>
                 <td style="text-align:center">${item.diluyente_ml} mL</td>
@@ -3758,51 +3303,18 @@ function renderReferencia(el) {
 }
 
 function calcReconstitucion() {
-  const mg      = parseFloat(document.getElementById('calc-mg')?.value) || 0;
-  const agua    = parseFloat(document.getElementById('calc-agua')?.value) || 0;
-  const dosisMg = parseFloat(document.getElementById('calc-dosis-mg')?.value) || 0;
-  const res     = document.getElementById('calc-result');
+  const mg   = parseFloat(document.getElementById('calc-mg')?.value) || 0;
+  const conc = parseFloat(document.getElementById('calc-conc')?.value) || 0;
+  const res  = document.getElementById('calc-result');
+  const det  = document.getElementById('calc-detail');
   if (!res) return;
-  if (!mg || !agua) {
-    res.innerHTML = `<div style="padding:10px 14px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:12.5px;color:var(--gray-400);text-align:center">Ingresá mg del frasco y mL de agua para calcular</div>`;
-    return;
-  }
-  const concentracion = mg / agua;
-  const dosisCount    = dosisMg ? Math.floor(mg / dosisMg) : null;
-  if (!dosisMg) {
-    res.innerHTML = `
-      <div style="padding:12px 16px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:13px;color:var(--on-surface-variant)">
-        Concentración: <strong style="color:var(--primary)">${+concentracion.toFixed(3)} mg/mL</strong>
-        &nbsp;·&nbsp; Cada 0.1 mL = <strong>${+(0.1*concentracion).toFixed(3)} mg</strong>
-        <br><span style="font-size:11.5px;color:var(--gray-400)">Ingresá la dosis deseada en mg para ver las unidades de jeringa</span>
-      </div>`;
-    return;
-  }
-  const mlPorDosis = dosisMg / concentracion;
-  const unidades   = Math.round(mlPorDosis * 100);
-  res.innerHTML = `
-    <div style="margin-bottom:10px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;border-radius:var(--radius-sm);padding:16px;text-align:center">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#15803d;margin-bottom:6px">💉 Unidades en jeringa U-100</div>
-      <div style="font-size:42px;font-weight:900;color:#14532d;line-height:1">${unidades}</div>
-      <div style="font-size:12px;color:#16a34a;margin-top:4px">unidades para una dosis de ${dosisMg} mg</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:var(--radius-sm);padding:14px;text-align:center">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#3b82f6;margin-bottom:4px">volumen por dosis</div>
-        <div style="font-size:26px;font-weight:800;color:#1d4ed8;line-height:1">${+mlPorDosis.toFixed(3)}</div>
-        <div style="font-size:12px;color:#3b82f6;margin-top:2px">mL</div>
-      </div>
-      <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border-radius:var(--radius-sm);padding:14px;text-align:center">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#7c3aed;margin-bottom:4px">concentración</div>
-        <div style="font-size:26px;font-weight:800;color:#5b21b6;line-height:1">${+concentracion.toFixed(2)}</div>
-        <div style="font-size:12px;color:#7c3aed;margin-top:2px">mg / mL</div>
-      </div>
-    </div>
-    <div style="margin-top:8px;padding:9px 14px;background:var(--surface-container-low);border-radius:var(--radius-sm);font-size:12.5px;color:var(--on-surface-variant)">
-      Frasco ${mg} mg en ${agua} mL
-      ${dosisCount ? `&nbsp;·&nbsp; ~<strong>${dosisCount} dosis</strong> de ${dosisMg} mg` : ''}
-      &nbsp;·&nbsp; Cada 0.1 mL = <strong>${+(0.1*concentracion).toFixed(3)} mg</strong>
-    </div>`;
+  if (!mg || !conc) { res.textContent = '— mL agua'; det.textContent = ''; return; }
+  const ml = +(mg / conc).toFixed(2);
+  res.textContent = `${ml} mL agua`;
+  res.style.color = 'var(--primary)';
+  // Volumen por dosis (0.1 mL jeringa U-100 = 10 UI)
+  const dosisPorJeringa = +(0.1 * conc).toFixed(3);
+  det.innerHTML = `Con <strong>${ml} mL</strong> de agua bacteriostática obtenés <strong>${conc} mg/mL</strong>. Cada 0.1 mL de jeringa = <strong>${dosisPorJeringa} mg</strong>.`;
 }
 
 function openModalRef(idx) {
