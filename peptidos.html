@@ -2767,7 +2767,7 @@ function renderCompraCard(c, db, idx) {
     <div class="compra-body" id="cb-${c.id}">
       ${!c.cortesia_suplidor?`${mgCortSup>0?`<div style="font-size:13px;background:var(--warning-light);color:#92400e;border-radius:8px;padding:10px 12px;margin-bottom:10px">🤝 <strong>${mgCortSup}mg</strong> cortesía del suplidor · <strong>${c.mg-mgCortSup}mg</strong> a cargo del consultorio · Costo: $${(c.costo_total||0).toLocaleString('es-AR')}</div>`:''}
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray-500);margin:12px 0 6px">💵 Historial de Pagos</div>
-      ${!(c.pagos||[]).length?'<div style="font-size:13px;color:var(--gray-400);padding:6px 0">Sin pagos registrados aún</div>':c.pagos.map(p=>`<div class="pago-row"><span class="badge ${p.tipo==='saldo'?'badge-saldo':'badge-abono'}">${p.tipo==='saldo'?'Saldo':'Abono'}</span><span style="font-weight:600">$${p.monto.toLocaleString('es-AR')}</span><span style="color:var(--gray-400)">${p.fecha}</span>${p.nota?`<span style="color:var(--gray-500);flex:1">${esc(p.nota)}</span>`:'<span style="flex:1"></span>'}<button class="btn btn-ghost btn-sm" style="color:var(--danger);padding:2px 6px" onclick="eliminarPago('${c.id}','${p.id}')">✕</button></div>`).join('')}`
+      ${!(c.pagos||[]).length?'<div style="font-size:13px;color:var(--gray-400);padding:6px 0">Sin pagos registrados aún</div>':c.pagos.map(p=>`<div class="pago-row"><span class="badge ${p.tipo==='cortesia_suplidor'?'badge-cortesia':p.tipo==='saldo'?'badge-saldo':'badge-abono'}">${p.tipo==='cortesia_suplidor'?'🎁 Cortesía Sup.':p.tipo==='saldo'?'Saldo':'Abono'}</span><span style="font-weight:600">$${p.monto.toLocaleString('es-AR')}</span><span style="color:var(--gray-400)">${p.fecha}</span>${p.nota?`<span style="color:var(--gray-500);flex:1">${esc(p.nota)}</span>`:'<span style="flex:1"></span>'}<button class="btn btn-ghost btn-sm" style="color:var(--danger);padding:2px 6px" onclick="eliminarPago('${c.id}','${p.id}')">✕</button></div>`).join('')}`
       :'<div style="font-size:13px;color:#7c3aed;padding:12px 0">🎁 Este frasco fue recibido como cortesía del suplidor</div>'}
       ${cortCliCount>0?`<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray-500);margin:14px 0 6px">🤝 Cortesías a Clientes</div>${c.cortesias_clientes.map(cc=>{const pac=db.find(p=>p.id===cc.paciente_id);const nombre=pac?`${pac.datos_personales.nombre} ${pac.datos_personales.apellido}`:cc.paciente_nombre||'(eliminado)';return`<div class="pago-row"><span class="badge badge-cortesia">Cortesía</span><span style="font-weight:600">${esc(nombre)}</span>${cc.cantidad_mg?`<span style="color:var(--gray-500)">${cc.cantidad_mg} mg</span>`:''}<span style="color:var(--gray-400)">${cc.fecha}</span>${cc.nota?`<span style="color:var(--gray-500);flex:1">${esc(cc.nota)}</span>`:'<span style="flex:1"></span>'}<button class="btn btn-ghost btn-sm" style="color:var(--danger);padding:2px 6px" onclick="eliminarCortesiaCli('${c.id}','${cc.id}')">✕</button></div>`;}).join('')}`:''}
     </div>
@@ -2839,13 +2839,24 @@ function modalPagoCompra(compraId) {
         <div>Ya pagado: <strong style="color:var(--success)">$${pag.toLocaleString('es-AR')}</strong></div>
         <div>Saldo pendiente: <strong style="color:var(--danger)">$${pend.toLocaleString('es-AR')}</strong></div>
       </div>
-      <div class="form-group"><label>Tipo de pago</label><select id="pg-tipo"><option value="abono">💳 Abono (pago parcial)</option><option value="saldo">✅ Saldo (pago total / cierre)</option></select></div>
-      <div class="form-group"><label>Monto pagado ($) *</label><input type="number" step="0.01" id="pg-monto" value="${pend>0?pend:''}"></div>
+      <div class="form-group"><label>Tipo de pago</label><select id="pg-tipo" onchange="onChangeTipoPago(this,${pend})"><option value="abono">💳 Abono (pago parcial)</option><option value="saldo">✅ Saldo (pago total / cierre)</option><option value="cortesia_suplidor">🎁 Cortesía del suplidor (el suplidor cubre este monto)</option></select></div>
+      <div id="pg-cortesia-note" style="display:none;background:var(--warning-light);border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:12px">El suplidor cubre este monto — no es un pago en efectivo. El frasco quedará saldado.</div>
+      <div class="form-group"><label id="pg-monto-label">Monto pagado ($) *</label><input type="number" step="0.01" id="pg-monto" value="${pend>0?pend:''}"></div>
       <div class="form-group"><label>Fecha de pago *</label><input type="date" id="pg-fecha" value="${today}"></div>
       <div class="form-group"><label>Nota</label><input type="text" id="pg-nota" placeholder="Ej: transferencia, efectivo…"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="guardarPagoCompra('${compraId}')">💾 Guardar Pago</button></div>
   </div>`);
+}
+
+function onChangeTipoPago(sel, pendiente) {
+  const isCort=sel.value==='cortesia_suplidor';
+  const note=document.getElementById('pg-cortesia-note');
+  const label=document.getElementById('pg-monto-label');
+  const monto=document.getElementById('pg-monto');
+  if (note) note.style.display=isCort?'block':'none';
+  if (label) label.textContent=isCort?'Monto cubierto por el suplidor ($) *':'Monto pagado ($) *';
+  if (isCort&&monto&&(!monto.value||parseFloat(monto.value)===0)) monto.value=pendiente>0?pendiente:'';
 }
 
 function guardarPagoCompra(compraId) {
@@ -2855,7 +2866,7 @@ function guardarPagoCompra(compraId) {
   if (!c.pagos) c.pagos=[];
   const tipo=document.getElementById('pg-tipo').value;
   c.pagos.push({ id:newId(), fecha, monto, tipo, nota:document.getElementById('pg-nota').value.trim() });
-  if (tipo==='saldo') c.fecha_saldo=fecha;
+  if (tipo==='saldo'||tipo==='cortesia_suplidor') c.fecha_saldo=fecha;
   saveCompras(compras); closeModal(); renderProveedor(document.getElementById('content'));
 }
 
