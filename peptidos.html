@@ -645,9 +645,17 @@ select { background: var(--white); cursor: pointer; }
   -webkit-tap-highlight-color: transparent;
 }
 .sync-big-btn:hover { border-color: var(--primary); background: var(--primary-bg); }
+.sync-big-btn.sync-busy { opacity: 0.45; pointer-events: none; cursor: not-allowed; }
 .sync-big-btn .sbb-icon  { font-size: 34px; }
 .sync-big-btn .sbb-title { font-size: 14px; font-weight: 700; color: var(--gray-800); }
 .sync-big-btn .sbb-sub   { font-size: 11.5px; color: var(--gray-500); }
+.sync-btn-upload { border-color: var(--success); }
+.sync-btn-upload:hover { border-color: var(--success); background: var(--success-light) !important; }
+.sync-btn-upload .sbb-title { color: #065f46; }
+.sync-btn-download { border-color: var(--warning); }
+.sync-btn-download:hover { border-color: var(--warning); background: var(--warning-light) !important; }
+.sync-btn-download .sbb-title { color: #92400e; }
+.sync-pull-zone { border-top: 1px dashed var(--gray-200); padding-top: 12px; margin-top: 4px; }
 .token-input-wrap { display: flex; gap: 8px; }
 .token-input-wrap input { flex: 1; font-family: monospace; font-size: 12px; }
 
@@ -787,7 +795,12 @@ select { background: var(--white); cursor: pointer; }
     -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
   }
   .modal-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
-  .sync-action-row { grid-template-columns: 1fr; }
+  .sync-action-row { grid-template-columns: 1fr; gap: 0; }
+  .sync-btn-upload { margin-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+  .sync-btn-download { border-radius: 0 0 var(--radius) var(--radius); border-top: none; background: var(--gray-50) !important; }
+  .sync-btn-download .sbb-icon { font-size: 24px; }
+  .sync-btn-download .sbb-title { font-size: 13px; }
+  .sync-btn-download .sbb-sub { color: #92400e; font-weight: 600; }
   .sync-pill .sync-text { display: none; }
   .sync-pill { padding: 5px 8px; }
   input[type=text], input[type=date], input[type=number], input[type=email],
@@ -3141,7 +3154,16 @@ async function findExistingGist() {
 }
 
 // — Manual Push/Pull (desde la pantalla Sync) —
+let _syncBusy = false;
+function _setSyncBtns(busy) {
+  ['sync-btn-push','sync-btn-pull'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('sync-busy', busy);
+  });
+}
 async function pushToGist() {
+  if (_syncBusy) { showToast('Sync en progreso, esperá un momento…', 'error'); return; }
+  _syncBusy = true; _setSyncBtns(true);
   setSyncLog('Conectando con GitHub…', 'info');
   try {
     let gistId=getSyncGistId();
@@ -3159,9 +3181,12 @@ async function pushToGist() {
     showToast('Datos subidos a la nube ✓', 'success');
     setTimeout(() => renderSync(document.getElementById('content')), 1500);
   } catch(e) { setSyncLog('Error al subir: '+e.message,'err'); showToast('Error: '+e.message,'error'); _updateSyncStatus('error',e.message); }
+  finally { _syncBusy = false; _setSyncBtns(false); }
 }
 
 async function pullFromGist() {
+  if (_syncBusy) { showToast('Sync en progreso, esperá un momento…', 'error'); return; }
+  _syncBusy = true; _setSyncBtns(true);
   setSyncLog('Conectando con GitHub…','info');
   try {
     let gistId=getSyncGistId();
@@ -3175,7 +3200,7 @@ async function pullFromGist() {
     if (!data.pacientes||!Array.isArray(data.pacientes)) throw new Error('Formato inválido');
     const ts=data.timestamp?new Date(data.timestamp).toLocaleString('es',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'?';
     const ok=await customConfirm('¿Reemplazar datos locales?',`Backup del ${ts}\n• ${data.pacientes.length} pacientes\n• ${(data.compras||[]).length} frascos\n\nEsto reemplazará los datos en este dispositivo.`);
-    if (!ok) { setSyncLog('Operación cancelada.','info'); return; }
+    if (!ok) { setSyncLog('Operación cancelada.','info'); _syncBusy=false; _setSyncBtns(false); return; }
     localStorage.setItem(DB_KEY, JSON.stringify(data.pacientes));
     localStorage.setItem('peptidos_compras_v1', JSON.stringify(data.compras||[]));
     localStorage.setItem(SYNC_LAST_KEY, new Date().toISOString());
@@ -3184,6 +3209,7 @@ async function pullFromGist() {
     showToast('Datos bajados y aplicados ✓','success');
     setTimeout(() => renderSync(document.getElementById('content')), 1500);
   } catch(e) { setSyncLog('Error al bajar: '+e.message,'err'); showToast('Error: '+e.message,'error'); }
+  finally { _syncBusy=false; _setSyncBtns(false); }
 }
 
 function renderSync(el) {
@@ -3203,8 +3229,8 @@ function renderSync(el) {
       <strong>✨ Auto-sync activado:</strong> Los datos se guardan en la nube automáticamente cada vez que hacés un cambio. Al abrir la app en otro dispositivo, se descargan los últimos datos solos.
     </div>
     <div class="sync-action-row">
-      <div class="sync-big-btn" onclick="pushToGist()"><span class="sbb-icon">📤</span><span class="sbb-title">Subir ahora</span><span class="sbb-sub">Forzar subida manual</span></div>
-      <div class="sync-big-btn" onclick="pullFromGist()"><span class="sbb-icon">📥</span><span class="sbb-title">Bajar ahora</span><span class="sbb-sub">Forzar descarga manual</span></div>
+      <div class="sync-big-btn sync-btn-upload" id="sync-btn-push" onclick="pushToGist()"><span class="sbb-icon">📤</span><span class="sbb-title">Subir ahora</span><span class="sbb-sub">Guardar datos en la nube</span></div>
+      <div class="sync-big-btn sync-btn-download" id="sync-btn-pull" onclick="pullFromGist()"><span class="sbb-icon">📥</span><span class="sbb-title">Bajar ahora</span><span class="sbb-sub">⚠️ Reemplaza datos de este dispositivo</span></div>
     </div>
     <div id="sync-log" style="margin-top:4px"></div>
     <div class="card" style="margin-top:20px">
