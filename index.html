@@ -1777,8 +1777,25 @@ function guardarPaciente(e, id) {
 // ═══════════════════════════════════════════════════
 function openModal(html) {
   document.getElementById('modal-container').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`;
+  if (window.visualViewport) {
+    window._vvModalHandler = () => {
+      const overlay = document.querySelector('.modal-overlay');
+      if (!overlay) return;
+      const keyboardH = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+      overlay.style.bottom = keyboardH > 50 ? keyboardH + 'px' : '';
+    };
+    window.visualViewport.addEventListener('resize', window._vvModalHandler);
+    window.visualViewport.addEventListener('scroll', window._vvModalHandler);
+  }
 }
-function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
+function closeModal() {
+  if (window.visualViewport && window._vvModalHandler) {
+    window.visualViewport.removeEventListener('resize', window._vvModalHandler);
+    window.visualViewport.removeEventListener('scroll', window._vvModalHandler);
+    window._vvModalHandler = null;
+  }
+  document.getElementById('modal-container').innerHTML = '';
+}
 
 // — Copiar Protocolo de otro paciente —
 function openCopiarProtocolo(destId) {
