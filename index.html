@@ -436,7 +436,7 @@ select { background: var(--white); cursor: pointer; }
 .modal {
   background: var(--white); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg); width: 100%; max-width: 560px;
-  max-height: 90vh; overflow-y: auto;
+  max-height: 90vh; display: flex; flex-direction: column;
   animation: slideUp 0.2s cubic-bezier(0.16,1,0.3,1);
 }
 .modal-sm { max-width: 400px; }
@@ -444,15 +444,19 @@ select { background: var(--white); cursor: pointer; }
 .modal-header {
   padding: 18px 22px; border-bottom: 1px solid var(--gray-200);
   display: flex; justify-content: space-between; align-items: center;
-  position: sticky; top: 0; background: var(--white); z-index: 1;
+  flex-shrink: 0; background: var(--white); z-index: 1;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 .modal-header h3 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
-.modal-body   { padding: 20px 22px; }
+.modal-body {
+  padding: 20px 22px;
+  flex: 1; overflow-y: auto; min-height: 0;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+}
 .modal-footer {
   padding: 14px 22px; border-top: 1px solid var(--gray-200);
   display: flex; justify-content: flex-end; gap: 10px;
-  position: sticky; bottom: 0; background: var(--white);
+  flex-shrink: 0; background: var(--white);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 .close-btn {
@@ -788,13 +792,11 @@ select { background: var(--white); cursor: pointer; }
   .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
   .modal {
     max-width: 100% !important; width: 100% !important;
-    border-radius: 22px 22px 0 0 !important; max-height: 90vh !important;
+    border-radius: 22px 22px 0 0 !important; max-height: 85vh !important;
   }
-  .modal-body {
-    max-height: 60vh; overflow-y: auto;
-    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-  }
+  .modal-body { max-height: none; }
   .modal-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  #global-search-wrap { display: none !important; }
   .sync-action-row { grid-template-columns: 1fr; gap: 0; }
   .sync-btn-upload { margin-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
   .sync-btn-download { border-radius: 0 0 var(--radius) var(--radius); border-top: none; background: var(--gray-50) !important; }
@@ -1452,8 +1454,8 @@ function renderPerfil(el, id) {
   if (!p) { el.innerHTML = '<div class="empty"><h3>Paciente no encontrado</h3></div>'; return; }
   const d = p.datos_personales;
   document.getElementById('topbar-actions').innerHTML = `
-    <button class="btn btn-outline" onclick="navigate('editar','${id}')">✏️ Editar</button>
-    <button class="btn btn-outline" onclick="navigate('pacientes')">← Volver</button>`;
+    <button class="btn btn-outline btn-sm" onclick="navigate('editar','${id}')">✏️ Editar</button>
+    <button class="btn btn-outline btn-sm" onclick="navigate('pacientes')">← Volver</button>`;
   el.innerHTML = `
     <div class="patient-header">
       <div class="patient-avatar">${(d.nombre||'?')[0].toUpperCase()}</div>
@@ -1717,10 +1719,12 @@ function renderFormPaciente(el, id) {
   const p = id ? getPaciente(id) : null;
   const d = p?.datos_personales || {};
   document.getElementById('topbar-actions').innerHTML = id ?
-    `<button class="btn btn-outline" onclick="navigate('perfil','${id}')">← Cancelar</button>` :
-    `<button class="btn btn-outline" onclick="navigate('pacientes')">← Cancelar</button>`;
+    `<button class="btn btn-outline btn-sm" onclick="navigate('perfil','${id}')">← Cancelar</button>
+     <button class="btn btn-primary btn-sm" onclick="guardarPaciente(null,'${id}')">💾 Guardar</button>` :
+    `<button class="btn btn-outline btn-sm" onclick="navigate('pacientes')">← Cancelar</button>
+     <button class="btn btn-primary btn-sm" onclick="guardarPaciente(null,'')">💾 Guardar</button>`;
   el.innerHTML = `
-    <form onsubmit="guardarPaciente(event,'${id||''}')">
+    <form id="form-paciente" onsubmit="guardarPaciente(event,'${id||''}')">
       <div class="form-section">
         <div class="form-section-header"><span>👤</span><h3>Datos Personales</h3></div>
         <div class="form-section-body">
@@ -1758,8 +1762,19 @@ function renderFormPaciente(el, id) {
 }
 
 function guardarPaciente(e, id) {
-  e.preventDefault();
-  const f = e.target;
+  if (e && e.preventDefault) e.preventDefault();
+  const f = (e && e.target && e.target.nodeName === 'FORM')
+    ? e.target
+    : document.getElementById('form-paciente');
+  if (!f) return;
+  // Validar campos requeridos
+  const nombre = f.querySelector('[name="nombre"]')?.value?.trim();
+  const apellido = f.querySelector('[name="apellido"]')?.value?.trim();
+  if (!nombre || !apellido) {
+    showToast('Completá Nombre y Apellido (campos obligatorios)', 'error');
+    f.querySelector('[name="nombre"]')?.focus();
+    return;
+  }
   const g = n => f.querySelector(`[name="${n}"]`)?.value || '';
   let p = id ? getPaciente(id) : null;
   if (!p) p = { id: newId(), datos_personales:{}, protocolo_peptidos:[], historial_consultas:[], resultados:[], comentarios:[] };
