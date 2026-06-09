@@ -470,40 +470,26 @@ select { background: var(--white); cursor: pointer; }
    PATIENT PROFILE HEADER
 ══════════════════════════════════════════ */
 .patient-header {
-  background: #131b2e;
-  border-radius: 18px; padding: 24px 26px; margin-bottom: 20px;
-  color: #fff; display: flex; align-items: center; gap: 20px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
-  position: relative; overflow: hidden;
-}
-.patient-header::before {
-  content: ''; position: absolute; top: -60px; right: 40px;
-  width: 200px; height: 200px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,81,213,0.18) 0%, transparent 65%);
-  pointer-events: none;
-}
-.patient-header::after {
-  content: ''; position: absolute; bottom: -50px; right: -20px;
-  width: 160px; height: 160px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%);
-  pointer-events: none;
+  background: var(--white);
+  border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 20px;
+  color: var(--on-surface); display: flex; align-items: center; gap: 18px;
+  border: 1px solid var(--outline-variant);
+  box-shadow: var(--shadow);
 }
 .patient-avatar {
-  width: 64px; height: 64px; border-radius: 50%;
-  background: linear-gradient(135deg, #0051d5 0%, #316bf3 100%);
+  width: 56px; height: 56px; border-radius: 14px;
+  background: var(--primary-bg);
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px; font-weight: 800; flex-shrink: 0; color: #fff;
-  box-shadow: 0 6px 18px rgba(0,81,213,0.45);
-  border: 2px solid rgba(255,255,255,0.18);
-  position: relative; z-index: 1;
+  font-size: 22px; font-weight: 800; flex-shrink: 0; color: var(--primary);
+  border: 1.5px solid rgba(0,81,213,0.14);
 }
-.patient-header h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; position: relative; z-index: 1; }
-.patient-header p  { font-size: 12.5px; opacity: 0.55; margin-top: 3px; position: relative; z-index: 1; }
-.patient-meta { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; position: relative; z-index: 1; }
+.patient-header h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; color: var(--on-surface); }
+.patient-header p  { font-size: 12.5px; color: var(--on-surface-variant); margin-top: 3px; }
+.patient-meta { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 .patient-meta span {
-  font-size: 11px; display: flex; align-items: center; gap: 5px;
-  background: rgba(255,255,255,0.1); padding: 4px 11px; border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(4px);
+  font-size: 12px; display: flex; align-items: center; gap: 4px;
+  background: var(--surface-container-low); padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--outline-variant); color: var(--on-surface-variant);
 }
 
 /* ══════════════════════════════════════════
@@ -931,7 +917,7 @@ select { background: var(--white); cursor: pointer; }
     <div class="nav-item" onclick="navigate('proveedor')">
       <span class="nav-icon">inventory_2</span> Inventario
     </div>
-    <div class="nav-section-label" style="margin-top:10px">Herramientas</div>
+    <div class="nav-section-label" style="margin-top:10px">Referencia</div>
     <div class="nav-item" onclick="navigate('referencia')">
       <span class="nav-icon">science</span> Tabla Péptidos
     </div>
@@ -1128,24 +1114,21 @@ function renderDashboard(el) {
   el.innerHTML = `
     <!-- BANNER BIENVENIDA -->
     <div style="
-      background: #131b2e;
-      border-radius: 18px; padding: 26px 28px; margin-bottom: 22px;
+      background: linear-gradient(135deg, #eef2ff 0%, #f0f7ff 100%);
+      border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 22px;
       display: flex; align-items: center; justify-content: space-between;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-      position: relative; overflow: hidden;
+      border: 1px solid rgba(0,81,213,0.12);
     ">
-      <div style="position:absolute;top:-60px;right:30px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(0,81,213,0.22) 0%,transparent 65%);pointer-events:none"></div>
-      <div style="position:absolute;bottom:-50px;right:-10px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(49,107,243,0.14) 0%,transparent 70%);pointer-events:none"></div>
-      <div style="position:relative;z-index:1">
-        <div style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,0.45);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">${fechaHoy}</div>
-        <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.6px;line-height:1.15">${saludo}, Nadia 👋</div>
-        <div style="font-size:12.5px;color:rgba(255,255,255,0.5);margin-top:7px">
-          <strong style="color:rgba(255,255,255,0.88)">${db.length} pacientes</strong> registrados &nbsp;·&nbsp; <strong style="color:rgba(255,255,255,0.88)">${activos}</strong> en protocolo activo
+      <div>
+        <div style="font-size:10.5px;font-weight:600;color:var(--on-surface-variant);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:5px">${fechaHoy}</div>
+        <div style="font-size:20px;font-weight:700;color:var(--on-surface);letter-spacing:-0.4px;line-height:1.2">${saludo}, Nadia 👋</div>
+        <div style="font-size:12.5px;color:var(--on-surface-variant);margin-top:6px">
+          <strong style="color:var(--primary)">${db.length} pacientes</strong> registrados &nbsp;·&nbsp; <strong style="color:var(--success)">${activos}</strong> en protocolo activo
         </div>
       </div>
-      <div style="position:relative;z-index:1;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-        <button class="btn" style="background:rgba(0,81,213,0.7);color:#fff;border:1px solid rgba(255,255,255,0.15);backdrop-filter:blur(8px);font-size:13px;padding:9px 18px;border-radius:10px" onclick="navigate('nuevo')">+ Nuevo Paciente</button>
-        <button class="btn btn-sm" style="background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.1);font-size:12px;border-radius:8px" onclick="navigate('pacientes')">Ver todos →</button>
+      <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="navigate('nuevo')">+ Nuevo Paciente</button>
+        <button class="btn btn-outline btn-sm" onclick="navigate('pacientes')">Ver todos →</button>
       </div>
     </div>
 
@@ -1193,9 +1176,9 @@ function renderDashboard(el) {
       db.forEach(p => (p.historial_consultas||[]).forEach(c => { totalDeuda += getConsultaPayment(c).monto_pendiente||0; }));
       if (totalDeuda > 0) {
         const deudores = db.filter(p => { let d=0; (p.historial_consultas||[]).forEach(c=>{d+=getConsultaPayment(c).monto_pendiente||0;}); return d>0; }).length;
-        alerts.push(`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="navigate('finanzas')">
-          <span style="font-size:20px">💰</span>
-          <div style="flex:1"><strong style="color:#b91c1c">Deuda pendiente: $${totalDeuda.toLocaleString('es-AR')}</strong><span style="font-size:12px;color:#b91c1c"> · ${deudores} paciente${deudores>1?'s':''}</span></div>
+        alerts.push(`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius);padding:11px 16px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="navigate('finanzas')">
+          <span class="material-symbols-outlined" style="font-size:18px;color:#b91c1c;flex-shrink:0">account_balance_wallet</span>
+          <div style="flex:1;font-size:13px"><strong style="color:#b91c1c">Deuda pendiente: $${totalDeuda.toLocaleString('es-AR')}</strong><span style="color:#b91c1c"> · ${deudores} paciente${deudores>1?'s':''}</span></div>
           <span style="font-size:12px;color:#b91c1c;font-weight:600">Ver →</span>
         </div>`);
       }
@@ -1203,9 +1186,9 @@ function renderDashboard(el) {
       const vialesAlert = getVialesAlerta();
       if (vialesAlert.length) {
         const names = vialesAlert.map(v=>v.peptido).join(', ');
-        alerts.push(`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="navigate('proveedor')">
-          <span style="font-size:20px">⚠️</span>
-          <div style="flex:1"><strong style="color:#92400e">${vialesAlert.length} vial${vialesAlert.length>1?'es':''} próximo${vialesAlert.length>1?'s':''} a vencer:</strong><span style="font-size:12px;color:#92400e"> ${esc(names)}</span></div>
+        alerts.push(`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:11px 16px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="navigate('proveedor')">
+          <span class="material-symbols-outlined" style="font-size:18px;color:#92400e;flex-shrink:0">warning</span>
+          <div style="flex:1;font-size:13px"><strong style="color:#92400e">${vialesAlert.length} vial${vialesAlert.length>1?'es':''} próximo${vialesAlert.length>1?'s':''} a vencer:</strong><span style="color:#92400e"> ${esc(names)}</span></div>
           <span style="font-size:12px;color:#92400e;font-weight:600">Ver →</span>
         </div>`);
       }
@@ -1215,15 +1198,15 @@ function renderDashboard(el) {
     <!-- PANELES -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div class="card">
-        <div class="card-title" style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💉</span>
+        <div class="card-title" style="font-size:13.5px;font-weight:700;color:var(--on-surface);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--success)">vaccines</span>
           Esta Semana
         </div>
         ${renderEstaSemana(db)}
       </div>
       <div class="card">
-        <div class="card-title" style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#fef3c7,#fde68a);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📅</span>
+        <div class="card-title" style="font-size:13.5px;font-weight:700;color:var(--on-surface);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--warning)">calendar_today</span>
           Próximas Consultas
         </div>
         ${renderProximasConsultas(db, hoy)}
@@ -1463,20 +1446,20 @@ function renderPerfil(el, id) {
         <h2>${esc(d.nombre)} ${esc(d.apellido)}</h2>
         <p>${d.sexo||''} · ${calcEdad(d.fecha_nacimiento)}</p>
         <div class="patient-meta">
-          ${d.telefono ? `<span>📞 ${esc(d.telefono)}</span>` : ''}
-          ${d.email    ? `<span>✉️ ${esc(d.email)}</span>` : ''}
-          ${d.ciudad   ? `<span>📍 ${esc(d.ciudad)}</span>` : ''}
-          ${d.peso     ? `<span>⚖️ ${esc(d.peso)} kg</span>` : ''}
-          ${d.altura   ? `<span>📏 ${esc(d.altura)} cm</span>` : ''}
+          ${d.telefono ? `<span>${esc(d.telefono)}</span>` : ''}
+          ${d.email    ? `<span>${esc(d.email)}</span>` : ''}
+          ${d.ciudad   ? `<span>${esc(d.ciudad)}</span>` : ''}
+          ${d.peso     ? `<span>${esc(d.peso)} kg</span>` : ''}
+          ${d.altura   ? `<span>${esc(d.altura)} cm</span>` : ''}
         </div>
       </div>
     </div>
     <div class="tabs">
-      <div class="tab ${profileTab==='datos'?'active':''}"      onclick="profileTab='datos';renderPerfil(document.getElementById('content'),'${id}')">📋 Datos</div>
-      <div class="tab ${profileTab==='peptidos'?'active':''}"   onclick="profileTab='peptidos';renderPerfil(document.getElementById('content'),'${id}')">💉 Protocolo</div>
-      <div class="tab ${profileTab==='consultas'?'active':''}"  onclick="profileTab='consultas';renderPerfil(document.getElementById('content'),'${id}')">🗂️ Consultas</div>
-      <div class="tab ${profileTab==='resultados'?'active':''}" onclick="profileTab='resultados';renderPerfil(document.getElementById('content'),'${id}')">📈 Evolución</div>
-      <div class="tab ${profileTab==='comentarios'?'active':''}" onclick="profileTab='comentarios';renderPerfil(document.getElementById('content'),'${id}')">💬 Notas</div>
+      <div class="tab ${profileTab==='datos'?'active':''}"      onclick="profileTab='datos';renderPerfil(document.getElementById('content'),'${id}')">Datos</div>
+      <div class="tab ${profileTab==='peptidos'?'active':''}"   onclick="profileTab='peptidos';renderPerfil(document.getElementById('content'),'${id}')">Protocolo</div>
+      <div class="tab ${profileTab==='consultas'?'active':''}"  onclick="profileTab='consultas';renderPerfil(document.getElementById('content'),'${id}')">Consultas</div>
+      <div class="tab ${profileTab==='resultados'?'active':''}" onclick="profileTab='resultados';renderPerfil(document.getElementById('content'),'${id}')">Evolución</div>
+      <div class="tab ${profileTab==='comentarios'?'active':''}" onclick="profileTab='comentarios';renderPerfil(document.getElementById('content'),'${id}')">Notas</div>
     </div>
     <div id="tab-content">
       ${profileTab === 'datos'       ? renderTabDatos(p)       : ''}
