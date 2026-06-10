@@ -1473,22 +1473,53 @@ function renderPerfil(el, id) {
 
 function renderTabDatos(p) {
   const d = p.datos_personales;
-  const fields = [
-    ['Nombre',d.nombre],['Apellido',d.apellido],['DNI',d.dni],
-    ['Fecha de Nacimiento',formatDate(d.fecha_nacimiento)],['Sexo',d.sexo],
-    ['Teléfono',d.telefono],['Email',d.email],['Ciudad',d.ciudad],
-    ['Peso (kg)',d.peso],['Altura (cm)',d.altura],['Ocupación',d.ocupacion]
-  ];
-  return `<div class="card">
-    <div class="card-title">Información Personal</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
-      ${fields.map(([l,v]) => `
-        <div>
-          <div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${l}</div>
-          <div style="font-size:13.5px;color:var(--gray-900);font-weight:500">${v ? esc(v) : '<span style="color:var(--gray-300)">—</span>'}</div>
-        </div>`).join('')}
+  const field = (l, v) => `<div>
+    <div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${l}</div>
+    <div style="font-size:13.5px;color:var(--gray-900);font-weight:500">${v ? esc(String(v)) : '<span style="color:var(--gray-300)">—</span>'}</div>
+  </div>`;
+  const imc = (d.peso && d.altura) ? +(parseFloat(d.peso)/Math.pow(parseFloat(d.altura)/100,2)).toFixed(1) : null;
+  const imcCat = imc ? (imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'}) : null;
+
+  return `<div style="display:flex;flex-direction:column;gap:14px">
+    <div class="card">
+      <div class="card-title">Información Personal</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+        ${field('Nombre',d.nombre)}
+        ${field('Apellido',d.apellido)}
+        ${field('DNI',d.dni)}
+        ${field('Fecha de Nacimiento',formatDate(d.fecha_nacimiento))}
+        ${field('Sexo',d.sexo)}
+        ${field('Ocupación',d.ocupacion)}
+        ${field('Teléfono',d.telefono)}
+        ${field('Email',d.email)}
+        ${field('Ciudad',d.ciudad)}
+      </div>
     </div>
-    ${d.antecedentes ? `<hr class="divider"><div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Antecedentes / Observaciones</div><div style="font-size:13.5px;white-space:pre-line;line-height:1.6">${esc(d.antecedentes)}</div></div>` : ''}
+    <div class="card">
+      <div class="card-title">Datos Físicos</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+        ${field('Peso',d.peso ? d.peso+' kg' : '')}
+        ${field('Altura',d.altura ? d.altura+' cm' : '')}
+        <div>
+          <div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">IMC</div>
+          ${imc ? `<div style="font-size:15px;font-weight:800;color:${imcCat.c}">${imc} <span style="font-size:11px;font-weight:600">${imcCat.l}</span></div>` : '<span style="color:var(--gray-300)">—</span>'}
+        </div>
+      </div>
+    </div>
+    ${(d.objetivo_tratamiento||d.alergias||d.grupo_sanguineo||d.medicacion_actual||d.antecedentes_familiares||d.antecedentes) ? `
+    <div class="card">
+      <div class="card-title">Antecedentes Médicos</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        ${d.objetivo_tratamiento ? `<div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Objetivo del Tratamiento</div><div style="font-size:13.5px;color:var(--primary);font-weight:600">${esc(d.objetivo_tratamiento)}</div></div>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          ${field('Alergias',d.alergias)}
+          ${field('Grupo Sanguíneo',d.grupo_sanguineo)}
+        </div>
+        ${d.medicacion_actual ? `<div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Medicación Actual</div><div style="font-size:13.5px;white-space:pre-line;line-height:1.5">${esc(d.medicacion_actual)}</div></div>` : ''}
+        ${d.antecedentes_familiares ? `<div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Antecedentes Familiares</div><div style="font-size:13.5px;white-space:pre-line;line-height:1.5">${esc(d.antecedentes_familiares)}</div></div>` : ''}
+        ${d.antecedentes ? `<div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Historial Médico / Observaciones</div><div style="font-size:13.5px;white-space:pre-line;line-height:1.5">${esc(d.antecedentes)}</div></div>` : ''}
+      </div>
+    </div>` : ''}
   </div>`;
 }
 
@@ -1728,20 +1759,68 @@ function renderFormPaciente(el, id) {
             <div class="form-group"><label>Teléfono</label><input type="tel" name="telefono" value="${esc(d.telefono||'')}" placeholder="Ej: 11 1234-5678"></div>
             <div class="form-group"><label>Email</label><input type="email" name="email" value="${esc(d.email||'')}" placeholder="Ej: maria@email.com"></div>
             <div class="form-group"><label>Ciudad</label><input type="text" name="ciudad" value="${esc(d.ciudad||'')}" placeholder="Ej: Buenos Aires"></div>
-            <div class="form-group"><label>Peso actual (kg)</label><input type="number" step="0.1" name="peso" value="${esc(d.peso||'')}" placeholder="Ej: 65.5"></div>
-            <div class="form-group"><label>Altura (cm)</label><input type="number" name="altura" value="${esc(d.altura||'')}" placeholder="Ej: 165"></div>
-          </div>
-          <div class="form-group" style="margin-top:14px">
-            <label>Antecedentes clínicos / Observaciones generales</label>
-            <textarea name="antecedentes" rows="3" placeholder="Historial médico relevante, alergias, condiciones preexistentes...">${esc(d.antecedentes||'')}</textarea>
           </div>
         </div>
       </div>
+
+      <div class="form-section">
+        <div class="form-section-header"><span>⚖️</span><h3>Datos Físicos</h3></div>
+        <div class="form-section-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Peso actual (kg)</label>
+              <input type="number" step="0.1" name="peso" id="fp-peso" value="${esc(d.peso||'')}" placeholder="Ej: 65.5" oninput="calcImcForm()">
+            </div>
+            <div class="form-group">
+              <label>Altura (cm)</label>
+              <input type="number" name="altura" id="fp-altura" value="${esc(d.altura||'')}" placeholder="Ej: 165" oninput="calcImcForm()">
+            </div>
+            <div class="form-group">
+              <label>IMC <span style="font-size:10px;color:var(--gray-400)">(calculado automático)</span></label>
+              <input type="text" id="fp-imc" value="" placeholder="—" style="background:var(--surface-container-low)" readonly>
+            </div>
+          </div>
+          <div id="fp-imc-preview" style="margin-top:4px;min-height:22px;font-size:12.5px"></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-header"><span>🩺</span><h3>Antecedentes Médicos</h3></div>
+        <div class="form-section-body">
+          <div class="form-group">
+            <label>Objetivo del tratamiento</label>
+            <input type="text" name="objetivo_tratamiento" value="${esc(d.objetivo_tratamiento||'')}" placeholder="Ej: Reducción de peso, recuperación, anti-envejecimiento...">
+          </div>
+          <div class="form-grid">
+            <div class="form-group"><label>Alergias conocidas</label><input type="text" name="alergias" value="${esc(d.alergias||'')}" placeholder="Ej: Penicilina, mariscos, ninguna conocida"></div>
+            <div class="form-group"><label>Grupo sanguíneo</label>
+              <select name="grupo_sanguineo">
+                <option value="">— Seleccionar —</option>
+                ${['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(g=>`<option value="${g}" ${d.grupo_sanguineo===g?'selected':''}>${g}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Medicación actual</label>
+            <textarea name="medicacion_actual" rows="2" placeholder="Medicamentos, suplementos o tratamientos que toma actualmente...">${esc(d.medicacion_actual||'')}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Antecedentes familiares relevantes</label>
+            <textarea name="antecedentes_familiares" rows="2" placeholder="Diabetes, enfermedades cardíacas, cáncer, obesidad...">${esc(d.antecedentes_familiares||'')}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Historial médico / Observaciones generales</label>
+            <textarea name="antecedentes" rows="3" placeholder="Cirugías previas, condiciones preexistentes, observaciones...">${esc(d.antecedentes||'')}</textarea>
+          </div>
+        </div>
+      </div>
+
       <div class="form-actions">
         <button type="button" class="btn btn-outline" onclick="${id ? `navigate('perfil','${id}')` : `navigate('pacientes')`}">Cancelar</button>
         <button type="submit" class="btn btn-primary">💾 Guardar Paciente</button>
       </div>
     </form>`;
+  setTimeout(calcImcForm, 50);
 }
 
 function guardarPaciente(e, id) {
@@ -1765,7 +1844,12 @@ function guardarPaciente(e, id) {
     nombre:g('nombre'), apellido:g('apellido'), dni:g('dni'),
     fecha_nacimiento:g('fecha_nacimiento'), sexo:g('sexo'),
     ocupacion:g('ocupacion'), telefono:g('telefono'), email:g('email'),
-    ciudad:g('ciudad'), peso:g('peso'), altura:g('altura'), antecedentes:g('antecedentes')
+    ciudad:g('ciudad'), peso:g('peso'), altura:g('altura'),
+    objetivo_tratamiento:g('objetivo_tratamiento'),
+    alergias:g('alergias'), grupo_sanguineo:g('grupo_sanguineo'),
+    medicacion_actual:g('medicacion_actual'),
+    antecedentes_familiares:g('antecedentes_familiares'),
+    antecedentes:g('antecedentes')
   };
   savePaciente(p);
   showToast('✅ Paciente guardado correctamente', 'success');
@@ -1882,7 +1966,7 @@ function openModalPeptido(pacienteId, idx) {
             ${['Subcutánea','Intramuscular','Oral','Intranasal','Tópica','Intravenosa'].map(v=>`<option value="${v}" ${prot?.via===v?'selected':''}>${v}</option>`).join('')}
           </select>
         </div>
-        <div class="form-group"><label>Objetivo del tratamiento</label><input type="text" id="m-objetivo" value="${esc(prot?.objetivo||'')}" placeholder="Ej: Recuperación, adelgazamiento..."></div>
+        <div class="form-group"><label>Objetivo del tratamiento</label><input type="text" id="m-objetivo" value="${esc(prot?.objetivo||p.datos_personales.objetivo_tratamiento||'')}" placeholder="Ej: Recuperación, adelgazamiento..."></div>
         <div class="form-group"><label>Fecha de inicio</label><input type="date" id="m-fecha-inicio" value="${prot?.fecha_inicio||''}"></div>
         <div class="form-group"><label>Fecha de fin (opcional)</label><input type="date" id="m-fecha-fin" value="${prot?.fecha_fin||''}"></div>
         <div class="form-group"><label>Estado</label>
@@ -2064,7 +2148,7 @@ function openModalResultado(pacienteId, idx) {
   const d = p.datos_personales;
   // Pre-fill altura from patient data or previous record
   const alturaDefault = r?.altura || d.altura || '';
-  const pesoDefault   = r?.peso   || '';
+  const pesoDefault   = r?.peso   || d.peso  || '';
   openModal(`<div class="modal">
     <div class="modal-header">
       <h3>📈 ${r ? 'Editar Registro' : 'Nuevo Registro de Evolución'}</h3>
@@ -2101,6 +2185,22 @@ function openModalResultado(pacienteId, idx) {
   setTimeout(calcImcModal, 60);
 }
 
+function calcImcForm() {
+  const peso = parseFloat(document.getElementById('fp-peso')?.value);
+  const alt  = parseFloat(document.getElementById('fp-altura')?.value);
+  const imcEl = document.getElementById('fp-imc');
+  const prev  = document.getElementById('fp-imc-preview');
+  if (peso && alt && alt > 0 && imcEl) {
+    const imc = +(peso / Math.pow(alt/100, 2)).toFixed(1);
+    imcEl.value = imc;
+    const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
+    if (prev) prev.innerHTML = `<span style="font-weight:700;color:${cat.c}">IMC ${imc}</span> <span style="color:${cat.c}">${cat.l}</span>`;
+  } else if (imcEl) {
+    imcEl.value = '';
+    if (prev) prev.innerHTML = '';
+  }
+}
+
 function calcImcModal() {
   const peso = parseFloat(document.getElementById('r-peso')?.value);
   const alt  = parseFloat(document.getElementById('r-altura')?.value);
@@ -2123,10 +2223,8 @@ function guardarResultado(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   const peso = document.getElementById('r-peso').value;
   const altura = document.getElementById('r-altura').value;
-  // Auto-update patient altura if provided
-  if (altura && !p.datos_personales.altura) {
-    p.datos_personales.altura = altura;
-  }
+  if (altura) p.datos_personales.altura = altura;
+  if (peso)   p.datos_personales.peso   = peso;
   const data = {
     fecha, peso, altura, imc: document.getElementById('r-imc').value,
     tension: document.getElementById('r-tension').value,
