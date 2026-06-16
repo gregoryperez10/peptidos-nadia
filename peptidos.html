@@ -436,7 +436,7 @@ select { background: var(--white); cursor: pointer; }
 .modal {
   background: var(--white); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg); width: 100%; max-width: 560px;
-  max-height: 90vh; overflow-y: auto;
+  max-height: 90vh; display: flex; flex-direction: column;
   animation: slideUp 0.2s cubic-bezier(0.16,1,0.3,1);
 }
 .modal-sm { max-width: 400px; }
@@ -444,15 +444,19 @@ select { background: var(--white); cursor: pointer; }
 .modal-header {
   padding: 18px 22px; border-bottom: 1px solid var(--gray-200);
   display: flex; justify-content: space-between; align-items: center;
-  position: sticky; top: 0; background: var(--white); z-index: 1;
+  flex-shrink: 0; background: var(--white); z-index: 1;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 .modal-header h3 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
-.modal-body   { padding: 20px 22px; }
+.modal-body {
+  padding: 20px 22px;
+  flex: 1; overflow-y: auto; min-height: 0;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+}
 .modal-footer {
   padding: 14px 22px; border-top: 1px solid var(--gray-200);
   display: flex; justify-content: flex-end; gap: 10px;
-  position: sticky; bottom: 0; background: var(--white);
+  flex-shrink: 0; background: var(--white);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 .close-btn {
@@ -466,40 +470,26 @@ select { background: var(--white); cursor: pointer; }
    PATIENT PROFILE HEADER
 ══════════════════════════════════════════ */
 .patient-header {
-  background: #131b2e;
-  border-radius: 18px; padding: 24px 26px; margin-bottom: 20px;
-  color: #fff; display: flex; align-items: center; gap: 20px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
-  position: relative; overflow: hidden;
-}
-.patient-header::before {
-  content: ''; position: absolute; top: -60px; right: 40px;
-  width: 200px; height: 200px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,81,213,0.18) 0%, transparent 65%);
-  pointer-events: none;
-}
-.patient-header::after {
-  content: ''; position: absolute; bottom: -50px; right: -20px;
-  width: 160px; height: 160px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%);
-  pointer-events: none;
+  background: var(--white);
+  border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 20px;
+  color: var(--on-surface); display: flex; align-items: center; gap: 18px;
+  border: 1px solid var(--outline-variant);
+  box-shadow: var(--shadow);
 }
 .patient-avatar {
-  width: 64px; height: 64px; border-radius: 50%;
-  background: linear-gradient(135deg, #0051d5 0%, #316bf3 100%);
+  width: 56px; height: 56px; border-radius: 14px;
+  background: var(--primary-bg);
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px; font-weight: 800; flex-shrink: 0; color: #fff;
-  box-shadow: 0 6px 18px rgba(0,81,213,0.45);
-  border: 2px solid rgba(255,255,255,0.18);
-  position: relative; z-index: 1;
+  font-size: 22px; font-weight: 800; flex-shrink: 0; color: var(--primary);
+  border: 1.5px solid rgba(0,81,213,0.14);
 }
-.patient-header h2 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; position: relative; z-index: 1; }
-.patient-header p  { font-size: 12.5px; opacity: 0.55; margin-top: 3px; position: relative; z-index: 1; }
-.patient-meta { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; position: relative; z-index: 1; }
+.patient-header h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.4px; color: var(--on-surface); }
+.patient-header p  { font-size: 12.5px; color: var(--on-surface-variant); margin-top: 3px; }
+.patient-meta { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 .patient-meta span {
-  font-size: 11px; display: flex; align-items: center; gap: 5px;
-  background: rgba(255,255,255,0.1); padding: 4px 11px; border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(4px);
+  font-size: 12px; display: flex; align-items: center; gap: 4px;
+  background: var(--surface-container-low); padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--outline-variant); color: var(--on-surface-variant);
 }
 
 /* ══════════════════════════════════════════
@@ -788,13 +778,11 @@ select { background: var(--white); cursor: pointer; }
   .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
   .modal {
     max-width: 100% !important; width: 100% !important;
-    border-radius: 22px 22px 0 0 !important; max-height: 90vh !important;
+    border-radius: 22px 22px 0 0 !important; max-height: 85vh !important;
   }
-  .modal-body {
-    max-height: 60vh; overflow-y: auto;
-    -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-  }
+  .modal-body { max-height: none; }
   .modal-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+  #global-search-wrap { display: none !important; }
   .sync-action-row { grid-template-columns: 1fr; gap: 0; }
   .sync-btn-upload { margin-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
   .sync-btn-download { border-radius: 0 0 var(--radius) var(--radius); border-top: none; background: var(--gray-50) !important; }
@@ -929,7 +917,7 @@ select { background: var(--white); cursor: pointer; }
     <div class="nav-item" onclick="navigate('proveedor')">
       <span class="nav-icon">inventory_2</span> Inventario
     </div>
-    <div class="nav-section-label" style="margin-top:10px">Herramientas</div>
+    <div class="nav-section-label" style="margin-top:10px">Referencia</div>
     <div class="nav-item" onclick="navigate('referencia')">
       <span class="nav-icon">science</span> Tabla Péptidos
     </div>
@@ -1126,24 +1114,21 @@ function renderDashboard(el) {
   el.innerHTML = `
     <!-- BANNER BIENVENIDA -->
     <div style="
-      background: #131b2e;
-      border-radius: 18px; padding: 26px 28px; margin-bottom: 22px;
+      background: linear-gradient(135deg, #eef2ff 0%, #f0f7ff 100%);
+      border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 22px;
       display: flex; align-items: center; justify-content: space-between;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-      position: relative; overflow: hidden;
+      border: 1px solid rgba(0,81,213,0.12);
     ">
-      <div style="position:absolute;top:-60px;right:30px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(0,81,213,0.22) 0%,transparent 65%);pointer-events:none"></div>
-      <div style="position:absolute;bottom:-50px;right:-10px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(49,107,243,0.14) 0%,transparent 70%);pointer-events:none"></div>
-      <div style="position:relative;z-index:1">
-        <div style="font-size:10.5px;font-weight:600;color:rgba(255,255,255,0.45);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">${fechaHoy}</div>
-        <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.6px;line-height:1.15">${saludo}, Nadia 👋</div>
-        <div style="font-size:12.5px;color:rgba(255,255,255,0.5);margin-top:7px">
-          <strong style="color:rgba(255,255,255,0.88)">${db.length} pacientes</strong> registrados &nbsp;·&nbsp; <strong style="color:rgba(255,255,255,0.88)">${activos}</strong> en protocolo activo
+      <div>
+        <div style="font-size:10.5px;font-weight:600;color:var(--on-surface-variant);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:5px">${fechaHoy}</div>
+        <div style="font-size:20px;font-weight:700;color:var(--on-surface);letter-spacing:-0.4px;line-height:1.2">${saludo}, Nadia 👋</div>
+        <div style="font-size:12.5px;color:var(--on-surface-variant);margin-top:6px">
+          <strong style="color:var(--primary)">${db.length} pacientes</strong> registrados &nbsp;·&nbsp; <strong style="color:var(--success)">${activos}</strong> en protocolo activo
         </div>
       </div>
-      <div style="position:relative;z-index:1;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-        <button class="btn" style="background:rgba(0,81,213,0.7);color:#fff;border:1px solid rgba(255,255,255,0.15);backdrop-filter:blur(8px);font-size:13px;padding:9px 18px;border-radius:10px" onclick="navigate('nuevo')">+ Nuevo Paciente</button>
-        <button class="btn btn-sm" style="background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.1);font-size:12px;border-radius:8px" onclick="navigate('pacientes')">Ver todos →</button>
+      <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="navigate('nuevo')">+ Nuevo Paciente</button>
+        <button class="btn btn-outline btn-sm" onclick="navigate('pacientes')">Ver todos →</button>
       </div>
     </div>
 
@@ -1191,9 +1176,9 @@ function renderDashboard(el) {
       db.forEach(p => (p.historial_consultas||[]).forEach(c => { totalDeuda += getConsultaPayment(c).monto_pendiente||0; }));
       if (totalDeuda > 0) {
         const deudores = db.filter(p => { let d=0; (p.historial_consultas||[]).forEach(c=>{d+=getConsultaPayment(c).monto_pendiente||0;}); return d>0; }).length;
-        alerts.push(`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="navigate('finanzas')">
-          <span style="font-size:20px">💰</span>
-          <div style="flex:1"><strong style="color:#b91c1c">Deuda pendiente: $${totalDeuda.toLocaleString('es-AR')}</strong><span style="font-size:12px;color:#b91c1c"> · ${deudores} paciente${deudores>1?'s':''}</span></div>
+        alerts.push(`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius);padding:11px 16px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="navigate('finanzas')">
+          <span class="material-symbols-outlined" style="font-size:18px;color:#b91c1c;flex-shrink:0">account_balance_wallet</span>
+          <div style="flex:1;font-size:13px"><strong style="color:#b91c1c">Deuda pendiente: $${totalDeuda.toLocaleString('es-AR')}</strong><span style="color:#b91c1c"> · ${deudores} paciente${deudores>1?'s':''}</span></div>
           <span style="font-size:12px;color:#b91c1c;font-weight:600">Ver →</span>
         </div>`);
       }
@@ -1201,9 +1186,9 @@ function renderDashboard(el) {
       const vialesAlert = getVialesAlerta();
       if (vialesAlert.length) {
         const names = vialesAlert.map(v=>v.peptido).join(', ');
-        alerts.push(`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="navigate('proveedor')">
-          <span style="font-size:20px">⚠️</span>
-          <div style="flex:1"><strong style="color:#92400e">${vialesAlert.length} vial${vialesAlert.length>1?'es':''} próximo${vialesAlert.length>1?'s':''} a vencer:</strong><span style="font-size:12px;color:#92400e"> ${esc(names)}</span></div>
+        alerts.push(`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:11px 16px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="navigate('proveedor')">
+          <span class="material-symbols-outlined" style="font-size:18px;color:#92400e;flex-shrink:0">warning</span>
+          <div style="flex:1;font-size:13px"><strong style="color:#92400e">${vialesAlert.length} vial${vialesAlert.length>1?'es':''} próximo${vialesAlert.length>1?'s':''} a vencer:</strong><span style="color:#92400e"> ${esc(names)}</span></div>
           <span style="font-size:12px;color:#92400e;font-weight:600">Ver →</span>
         </div>`);
       }
@@ -1213,15 +1198,15 @@ function renderDashboard(el) {
     <!-- PANELES -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div class="card">
-        <div class="card-title" style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💉</span>
+        <div class="card-title" style="font-size:13.5px;font-weight:700;color:var(--on-surface);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--success)">vaccines</span>
           Esta Semana
         </div>
         ${renderEstaSemana(db)}
       </div>
       <div class="card">
-        <div class="card-title" style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-          <span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#fef3c7,#fde68a);display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📅</span>
+        <div class="card-title" style="font-size:13.5px;font-weight:700;color:var(--on-surface);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--warning)">calendar_today</span>
           Próximas Consultas
         </div>
         ${renderProximasConsultas(db, hoy)}
@@ -1452,8 +1437,8 @@ function renderPerfil(el, id) {
   if (!p) { el.innerHTML = '<div class="empty"><h3>Paciente no encontrado</h3></div>'; return; }
   const d = p.datos_personales;
   document.getElementById('topbar-actions').innerHTML = `
-    <button class="btn btn-outline" onclick="navigate('editar','${id}')">✏️ Editar</button>
-    <button class="btn btn-outline" onclick="navigate('pacientes')">← Volver</button>`;
+    <button class="btn btn-outline btn-sm" onclick="navigate('editar','${id}')">✏️ Editar</button>
+    <button class="btn btn-outline btn-sm" onclick="navigate('pacientes')">← Volver</button>`;
   el.innerHTML = `
     <div class="patient-header">
       <div class="patient-avatar">${(d.nombre||'?')[0].toUpperCase()}</div>
@@ -1461,20 +1446,20 @@ function renderPerfil(el, id) {
         <h2>${esc(d.nombre)} ${esc(d.apellido)}</h2>
         <p>${d.sexo||''} · ${calcEdad(d.fecha_nacimiento)}</p>
         <div class="patient-meta">
-          ${d.telefono ? `<span>📞 ${esc(d.telefono)}</span>` : ''}
-          ${d.email    ? `<span>✉️ ${esc(d.email)}</span>` : ''}
-          ${d.ciudad   ? `<span>📍 ${esc(d.ciudad)}</span>` : ''}
-          ${d.peso     ? `<span>⚖️ ${esc(d.peso)} kg</span>` : ''}
-          ${d.altura   ? `<span>📏 ${esc(d.altura)} cm</span>` : ''}
+          ${d.telefono ? `<span>${esc(d.telefono)}</span>` : ''}
+          ${d.email    ? `<span>${esc(d.email)}</span>` : ''}
+          ${d.ciudad   ? `<span>${esc(d.ciudad)}</span>` : ''}
+          ${d.peso     ? `<span>${esc(d.peso)} kg</span>` : ''}
+          ${d.altura   ? `<span>${esc(d.altura)} cm</span>` : ''}
         </div>
       </div>
     </div>
     <div class="tabs">
-      <div class="tab ${profileTab==='datos'?'active':''}"      onclick="profileTab='datos';renderPerfil(document.getElementById('content'),'${id}')">📋 Datos</div>
-      <div class="tab ${profileTab==='peptidos'?'active':''}"   onclick="profileTab='peptidos';renderPerfil(document.getElementById('content'),'${id}')">💉 Protocolo</div>
-      <div class="tab ${profileTab==='consultas'?'active':''}"  onclick="profileTab='consultas';renderPerfil(document.getElementById('content'),'${id}')">🗂️ Consultas</div>
-      <div class="tab ${profileTab==='resultados'?'active':''}" onclick="profileTab='resultados';renderPerfil(document.getElementById('content'),'${id}')">📈 Evolución</div>
-      <div class="tab ${profileTab==='comentarios'?'active':''}" onclick="profileTab='comentarios';renderPerfil(document.getElementById('content'),'${id}')">💬 Notas</div>
+      <div class="tab ${profileTab==='datos'?'active':''}"      onclick="profileTab='datos';renderPerfil(document.getElementById('content'),'${id}')">Datos</div>
+      <div class="tab ${profileTab==='peptidos'?'active':''}"   onclick="profileTab='peptidos';renderPerfil(document.getElementById('content'),'${id}')">Protocolo</div>
+      <div class="tab ${profileTab==='consultas'?'active':''}"  onclick="profileTab='consultas';renderPerfil(document.getElementById('content'),'${id}')">Consultas</div>
+      <div class="tab ${profileTab==='resultados'?'active':''}" onclick="profileTab='resultados';renderPerfil(document.getElementById('content'),'${id}')">Evolución</div>
+      <div class="tab ${profileTab==='comentarios'?'active':''}" onclick="profileTab='comentarios';renderPerfil(document.getElementById('content'),'${id}')">Notas</div>
     </div>
     <div id="tab-content">
       ${profileTab === 'datos'       ? renderTabDatos(p)       : ''}
@@ -1488,22 +1473,53 @@ function renderPerfil(el, id) {
 
 function renderTabDatos(p) {
   const d = p.datos_personales;
-  const fields = [
-    ['Nombre',d.nombre],['Apellido',d.apellido],['DNI',d.dni],
-    ['Fecha de Nacimiento',formatDate(d.fecha_nacimiento)],['Sexo',d.sexo],
-    ['Teléfono',d.telefono],['Email',d.email],['Ciudad',d.ciudad],
-    ['Peso (kg)',d.peso],['Altura (cm)',d.altura],['Ocupación',d.ocupacion]
-  ];
-  return `<div class="card">
-    <div class="card-title">Información Personal</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
-      ${fields.map(([l,v]) => `
-        <div>
-          <div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${l}</div>
-          <div style="font-size:13.5px;color:var(--gray-900);font-weight:500">${v ? esc(v) : '<span style="color:var(--gray-300)">—</span>'}</div>
-        </div>`).join('')}
+  const field = (l, v) => `<div>
+    <div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${l}</div>
+    <div style="font-size:13.5px;color:var(--gray-900);font-weight:500">${v ? esc(String(v)) : '<span style="color:var(--gray-300)">—</span>'}</div>
+  </div>`;
+  const imc = (d.peso && d.altura) ? +(parseFloat(d.peso)/Math.pow(parseFloat(d.altura)/100,2)).toFixed(1) : null;
+  const imcCat = imc ? (imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'}) : null;
+
+  return `<div style="display:flex;flex-direction:column;gap:14px">
+    <div class="card">
+      <div class="card-title">Información Personal</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+        ${field('Nombre',d.nombre)}
+        ${field('Apellido',d.apellido)}
+        ${field('DNI',d.dni)}
+        ${field('Fecha de Nacimiento',formatDate(d.fecha_nacimiento))}
+        ${field('Sexo',d.sexo)}
+        ${field('Ocupación',d.ocupacion)}
+        ${field('Teléfono',d.telefono)}
+        ${field('Email',d.email)}
+        ${field('Ciudad',d.ciudad)}
+      </div>
     </div>
-    ${d.antecedentes ? `<hr class="divider"><div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Antecedentes / Observaciones</div><div style="font-size:13.5px;white-space:pre-line;line-height:1.6">${esc(d.antecedentes)}</div></div>` : ''}
+    <div class="card">
+      <div class="card-title">Datos Físicos</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+        ${field('Peso',d.peso ? d.peso+' kg' : '')}
+        ${field('Altura',d.altura ? d.altura+' cm' : '')}
+        <div>
+          <div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">IMC</div>
+          ${imc ? `<div style="font-size:15px;font-weight:800;color:${imcCat.c}">${imc} <span style="font-size:11px;font-weight:600">${imcCat.l}</span></div>` : '<span style="color:var(--gray-300)">—</span>'}
+        </div>
+      </div>
+    </div>
+    ${(d.objetivo_tratamiento||d.alergias||d.grupo_sanguineo||d.medicacion_actual||d.antecedentes_familiares||d.antecedentes) ? `
+    <div class="card">
+      <div class="card-title">Antecedentes Médicos</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        ${d.objetivo_tratamiento ? `<div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Objetivo del Tratamiento</div><div style="font-size:13.5px;color:var(--primary);font-weight:600">${esc(d.objetivo_tratamiento)}</div></div>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          ${field('Alergias',d.alergias)}
+          ${field('Grupo Sanguíneo',d.grupo_sanguineo)}
+        </div>
+        ${d.medicacion_actual ? `<div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Medicación Actual</div><div style="font-size:13.5px;white-space:pre-line;line-height:1.5">${esc(d.medicacion_actual)}</div></div>` : ''}
+        ${d.antecedentes_familiares ? `<div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Antecedentes Familiares</div><div style="font-size:13.5px;white-space:pre-line;line-height:1.5">${esc(d.antecedentes_familiares)}</div></div>` : ''}
+        ${d.antecedentes ? `<div><div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Historial Médico / Observaciones</div><div style="font-size:13.5px;white-space:pre-line;line-height:1.5">${esc(d.antecedentes)}</div></div>` : ''}
+      </div>
+    </div>` : ''}
   </div>`;
 }
 
@@ -1717,10 +1733,12 @@ function renderFormPaciente(el, id) {
   const p = id ? getPaciente(id) : null;
   const d = p?.datos_personales || {};
   document.getElementById('topbar-actions').innerHTML = id ?
-    `<button class="btn btn-outline" onclick="navigate('perfil','${id}')">← Cancelar</button>` :
-    `<button class="btn btn-outline" onclick="navigate('pacientes')">← Cancelar</button>`;
+    `<button class="btn btn-outline btn-sm" onclick="navigate('perfil','${id}')">← Cancelar</button>
+     <button class="btn btn-primary btn-sm" onclick="guardarPaciente(null,'${id}')">💾 Guardar</button>` :
+    `<button class="btn btn-outline btn-sm" onclick="navigate('pacientes')">← Cancelar</button>
+     <button class="btn btn-primary btn-sm" onclick="guardarPaciente(null,'')">💾 Guardar</button>`;
   el.innerHTML = `
-    <form onsubmit="guardarPaciente(event,'${id||''}')">
+    <form id="form-paciente" onsubmit="guardarPaciente(event,'${id||''}')">
       <div class="form-section">
         <div class="form-section-header"><span>👤</span><h3>Datos Personales</h3></div>
         <div class="form-section-body">
@@ -1741,25 +1759,84 @@ function renderFormPaciente(el, id) {
             <div class="form-group"><label>Teléfono</label><input type="tel" name="telefono" value="${esc(d.telefono||'')}" placeholder="Ej: 11 1234-5678"></div>
             <div class="form-group"><label>Email</label><input type="email" name="email" value="${esc(d.email||'')}" placeholder="Ej: maria@email.com"></div>
             <div class="form-group"><label>Ciudad</label><input type="text" name="ciudad" value="${esc(d.ciudad||'')}" placeholder="Ej: Buenos Aires"></div>
-            <div class="form-group"><label>Peso actual (kg)</label><input type="number" step="0.1" name="peso" value="${esc(d.peso||'')}" placeholder="Ej: 65.5"></div>
-            <div class="form-group"><label>Altura (cm)</label><input type="number" name="altura" value="${esc(d.altura||'')}" placeholder="Ej: 165"></div>
-          </div>
-          <div class="form-group" style="margin-top:14px">
-            <label>Antecedentes clínicos / Observaciones generales</label>
-            <textarea name="antecedentes" rows="3" placeholder="Historial médico relevante, alergias, condiciones preexistentes...">${esc(d.antecedentes||'')}</textarea>
           </div>
         </div>
       </div>
+
+      <div class="form-section">
+        <div class="form-section-header"><span>⚖️</span><h3>Datos Físicos</h3></div>
+        <div class="form-section-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Peso actual (kg)</label>
+              <input type="number" step="0.1" name="peso" id="fp-peso" value="${esc(d.peso||'')}" placeholder="Ej: 65.5" oninput="calcImcForm()">
+            </div>
+            <div class="form-group">
+              <label>Altura (cm)</label>
+              <input type="number" name="altura" id="fp-altura" value="${esc(d.altura||'')}" placeholder="Ej: 165" oninput="calcImcForm()">
+            </div>
+            <div class="form-group">
+              <label>IMC <span style="font-size:10px;color:var(--gray-400)">(calculado automático)</span></label>
+              <input type="text" id="fp-imc" value="" placeholder="—" style="background:var(--surface-container-low)" readonly>
+            </div>
+          </div>
+          <div id="fp-imc-preview" style="margin-top:4px;min-height:22px;font-size:12.5px"></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-header"><span>🩺</span><h3>Antecedentes Médicos</h3></div>
+        <div class="form-section-body">
+          <div class="form-group">
+            <label>Objetivo del tratamiento</label>
+            <input type="text" name="objetivo_tratamiento" value="${esc(d.objetivo_tratamiento||'')}" placeholder="Ej: Reducción de peso, recuperación, anti-envejecimiento...">
+          </div>
+          <div class="form-grid">
+            <div class="form-group"><label>Alergias conocidas</label><input type="text" name="alergias" value="${esc(d.alergias||'')}" placeholder="Ej: Penicilina, mariscos, ninguna conocida"></div>
+            <div class="form-group"><label>Grupo sanguíneo</label>
+              <select name="grupo_sanguineo">
+                <option value="">— Seleccionar —</option>
+                ${['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(g=>`<option value="${g}" ${d.grupo_sanguineo===g?'selected':''}>${g}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Medicación actual</label>
+            <textarea name="medicacion_actual" rows="2" placeholder="Medicamentos, suplementos o tratamientos que toma actualmente...">${esc(d.medicacion_actual||'')}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Antecedentes familiares relevantes</label>
+            <textarea name="antecedentes_familiares" rows="2" placeholder="Diabetes, enfermedades cardíacas, cáncer, obesidad...">${esc(d.antecedentes_familiares||'')}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Historial médico / Observaciones generales</label>
+            <textarea name="antecedentes" rows="3" placeholder="Cirugías previas, condiciones preexistentes, observaciones...">${esc(d.antecedentes||'')}</textarea>
+          </div>
+        </div>
+      </div>
+
       <div class="form-actions">
         <button type="button" class="btn btn-outline" onclick="${id ? `navigate('perfil','${id}')` : `navigate('pacientes')`}">Cancelar</button>
         <button type="submit" class="btn btn-primary">💾 Guardar Paciente</button>
       </div>
     </form>`;
+  setTimeout(calcImcForm, 50);
 }
 
 function guardarPaciente(e, id) {
-  e.preventDefault();
-  const f = e.target;
+  if (e && e.preventDefault) e.preventDefault();
+  const f = (e && e.target && e.target.nodeName === 'FORM')
+    ? e.target
+    : document.getElementById('form-paciente');
+  if (!f) return;
+  // Validar campos requeridos
+  const nombre = f.querySelector('[name="nombre"]')?.value?.trim();
+  const apellido = f.querySelector('[name="apellido"]')?.value?.trim();
+  if (!nombre || !apellido) {
+    showToast('Completá Nombre y Apellido (campos obligatorios)', 'error');
+    f.querySelector('[name="nombre"]')?.focus();
+    return;
+  }
   const g = n => f.querySelector(`[name="${n}"]`)?.value || '';
   let p = id ? getPaciente(id) : null;
   if (!p) p = { id: newId(), datos_personales:{}, protocolo_peptidos:[], historial_consultas:[], resultados:[], comentarios:[] };
@@ -1767,7 +1844,12 @@ function guardarPaciente(e, id) {
     nombre:g('nombre'), apellido:g('apellido'), dni:g('dni'),
     fecha_nacimiento:g('fecha_nacimiento'), sexo:g('sexo'),
     ocupacion:g('ocupacion'), telefono:g('telefono'), email:g('email'),
-    ciudad:g('ciudad'), peso:g('peso'), altura:g('altura'), antecedentes:g('antecedentes')
+    ciudad:g('ciudad'), peso:g('peso'), altura:g('altura'),
+    objetivo_tratamiento:g('objetivo_tratamiento'),
+    alergias:g('alergias'), grupo_sanguineo:g('grupo_sanguineo'),
+    medicacion_actual:g('medicacion_actual'),
+    antecedentes_familiares:g('antecedentes_familiares'),
+    antecedentes:g('antecedentes')
   };
   savePaciente(p);
   showToast('✅ Paciente guardado correctamente', 'success');
@@ -1779,8 +1861,25 @@ function guardarPaciente(e, id) {
 // ═══════════════════════════════════════════════════
 function openModal(html) {
   document.getElementById('modal-container').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`;
+  if (window.visualViewport) {
+    window._vvModalHandler = () => {
+      const overlay = document.querySelector('.modal-overlay');
+      if (!overlay) return;
+      const keyboardH = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+      overlay.style.bottom = keyboardH > 50 ? keyboardH + 'px' : '';
+    };
+    window.visualViewport.addEventListener('resize', window._vvModalHandler);
+    window.visualViewport.addEventListener('scroll', window._vvModalHandler);
+  }
 }
-function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
+function closeModal() {
+  if (window.visualViewport && window._vvModalHandler) {
+    window.visualViewport.removeEventListener('resize', window._vvModalHandler);
+    window.visualViewport.removeEventListener('scroll', window._vvModalHandler);
+    window._vvModalHandler = null;
+  }
+  document.getElementById('modal-container').innerHTML = '';
+}
 
 // — Copiar Protocolo de otro paciente —
 function openCopiarProtocolo(destId) {
@@ -1867,7 +1966,7 @@ function openModalPeptido(pacienteId, idx) {
             ${['Subcutánea','Intramuscular','Oral','Intranasal','Tópica','Intravenosa'].map(v=>`<option value="${v}" ${prot?.via===v?'selected':''}>${v}</option>`).join('')}
           </select>
         </div>
-        <div class="form-group"><label>Objetivo del tratamiento</label><input type="text" id="m-objetivo" value="${esc(prot?.objetivo||'')}" placeholder="Ej: Recuperación, adelgazamiento..."></div>
+        <div class="form-group"><label>Objetivo del tratamiento</label><input type="text" id="m-objetivo" value="${esc(prot?.objetivo||p.datos_personales.objetivo_tratamiento||'')}" placeholder="Ej: Recuperación, adelgazamiento..."></div>
         <div class="form-group"><label>Fecha de inicio</label><input type="date" id="m-fecha-inicio" value="${prot?.fecha_inicio||''}"></div>
         <div class="form-group"><label>Fecha de fin (opcional)</label><input type="date" id="m-fecha-fin" value="${prot?.fecha_fin||''}"></div>
         <div class="form-group"><label>Estado</label>
@@ -2049,7 +2148,7 @@ function openModalResultado(pacienteId, idx) {
   const d = p.datos_personales;
   // Pre-fill altura from patient data or previous record
   const alturaDefault = r?.altura || d.altura || '';
-  const pesoDefault   = r?.peso   || '';
+  const pesoDefault   = r?.peso   || d.peso  || '';
   openModal(`<div class="modal">
     <div class="modal-header">
       <h3>📈 ${r ? 'Editar Registro' : 'Nuevo Registro de Evolución'}</h3>
@@ -2086,6 +2185,22 @@ function openModalResultado(pacienteId, idx) {
   setTimeout(calcImcModal, 60);
 }
 
+function calcImcForm() {
+  const peso = parseFloat(document.getElementById('fp-peso')?.value);
+  const alt  = parseFloat(document.getElementById('fp-altura')?.value);
+  const imcEl = document.getElementById('fp-imc');
+  const prev  = document.getElementById('fp-imc-preview');
+  if (peso && alt && alt > 0 && imcEl) {
+    const imc = +(peso / Math.pow(alt/100, 2)).toFixed(1);
+    imcEl.value = imc;
+    const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
+    if (prev) prev.innerHTML = `<span style="font-weight:700;color:${cat.c}">IMC ${imc}</span> <span style="color:${cat.c}">${cat.l}</span>`;
+  } else if (imcEl) {
+    imcEl.value = '';
+    if (prev) prev.innerHTML = '';
+  }
+}
+
 function calcImcModal() {
   const peso = parseFloat(document.getElementById('r-peso')?.value);
   const alt  = parseFloat(document.getElementById('r-altura')?.value);
@@ -2108,10 +2223,8 @@ function guardarResultado(pacienteId, idx) {
   const p = getPaciente(pacienteId);
   const peso = document.getElementById('r-peso').value;
   const altura = document.getElementById('r-altura').value;
-  // Auto-update patient altura if provided
-  if (altura && !p.datos_personales.altura) {
-    p.datos_personales.altura = altura;
-  }
+  if (altura) p.datos_personales.altura = altura;
+  if (peso)   p.datos_personales.peso   = peso;
   const data = {
     fecha, peso, altura, imc: document.getElementById('r-imc').value,
     tension: document.getElementById('r-tension').value,
@@ -2512,7 +2625,7 @@ function renderAsistente(el) {
       <div style="background:linear-gradient(135deg,var(--gray-900),#1e3a5f);padding:16px 22px;color:#fff;display:flex;justify-content:space-between;align-items:center">
         <div>
           <div style="font-weight:700;font-size:15px">💬 Asistente de Base de Datos</div>
-          <div style="font-size:12px;opacity:0.75;margin-top:2px">Consultá en lenguaje natural · ${db.length} pacientes · 100% sin internet</div>
+          <div style="font-size:12px;opacity:0.75;margin-top:2px">Pacientes · Pagos · Base de conocimiento peptídica (5 módulos) · 100% sin internet</div>
         </div>
         <button class="btn btn-outline" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);color:#fff;font-size:12px" onclick="chatHistory=[];renderAsistente(document.getElementById('content'))">🗑️ Limpiar</button>
       </div>
@@ -2525,7 +2638,7 @@ function renderAsistente(el) {
       </div>
       <div style="padding:12px 16px;background:var(--white);border-top:1px solid var(--gray-200)">
         <div style="display:flex;gap:8px">
-          <input type="text" id="chat-input" placeholder="Ej: ¿Qué pasó el 7 de mayo? ¿Cuánto me debe Clara? Pacientes con Tirzepatida..."
+          <input type="text" id="chat-input" placeholder="Ej: ¿Qué es BPC-157? Protocolo cutting · ¿Cuánto me debe Clara? · Ingresos de mayo..."
             style="flex:1" onkeydown="if(event.key==='Enter')sendAIQuery()">
           <button class="btn btn-primary" onclick="sendAIQuery()">➤</button>
         </div>
@@ -2533,7 +2646,7 @@ function renderAsistente(el) {
       <div style="padding:10px 16px 14px;background:var(--white);border-top:1px solid var(--gray-100)">
         <div style="font-size:10.5px;font-weight:700;color:var(--gray-400);margin-bottom:7px;text-transform:uppercase;letter-spacing:0.5px">💡 Ejemplos</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${['¿Qué pasó el 7 de mayo?','¿Cuánto me debe María Guzman?','Total pendiente de todos','Pacientes con Tirzepatida','Ingresos de abril','¿Próximas consultas?','Pacientes activos'].map(q=>`<span class="chip" onclick="document.getElementById('chat-input').value='${q}';sendAIQuery()">${q}</span>`).join('')}
+          ${['¿Qué es BPC-157?','Dosis de MOTS-C','Protocolo cutting','Cómo reconstituir péptidos','¿Qué es Epitalon?','Protocolo lesión','¿Qué son las fórmulas magistrales?','¿Cuánto me debe María Guzman?','Ingresos de abril','¿Próximas consultas?'].map(q=>`<span class="chip" onclick="document.getElementById('chat-input').value='${q}';sendAIQuery()">${q}</span>`).join('')}
         </div>
       </div>
     </div>
@@ -2552,6 +2665,111 @@ function sendAIQuery() {
 
 function norm(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
 
+// ═══════════════════════════════════════════════════
+//  BASE DE CONOCIMIENTO PEPTÍDICA — 5 Módulos
+// ═══════════════════════════════════════════════════
+function peptidoKB(q) {
+  const ql = norm(q);
+
+  // RECONSTITUCIÓN / SOLVENTES
+  if (ql.match(/\b(reconstitu|solvente|bac water|acido acetico|cag water|disolver|diluir|como preparo|como reconstituyo)\b/)) {
+    if (ql.match(/\b(aod.?9604|aod)\b/)) return '💧 AOD-9604 — Solvente:\n\nUsar Ácido Acético 0,6% (NO BAC Water — forma hilos).\nAlternativa: CAG Water si no disuelve bien.\nEstabilidad: 45+ días en heladera.';
+    if (ql.match(/\b(tesamorel)\b/)) return '💧 Tesamorelina — Solvente:\n\nUsar CAG Water (extremadamente frágil). NO BAC Water.\nEstabilidad: máx 30 días en heladera.';
+    return '💧 Reconstitución — Guía:\n\n🧪 SOLVENTES:\n• BAC Water: BPC-157, CJC-1295, Ipamorelin, TB-500, GHK-Cu, DSIP, Epitalon, MOTS-C, SS-31, Humanin, Semax, Selank, KPV, PT-141, Melanotan II → 20-30 días heladera\n• Ácido Acético 0,6%: AOD-9604, GHRPs duros, IGF-1 LR3 → 45+ días\n• CAG Water: Tesamorelina, AOD-9604 difícil → 30-40 días\n\n📋 TÉCNICA:\n1. Limpiar tapa con alcohol 70%\n2. Aspirar solvente en jeringa insulínica (27-31G)\n3. Insertar aguja LATERAL (no sobre el polvo)\n4. Escurrir solvente por la pared\n5. NO agitar — girar suavemente\n6. Esperar 5-15 min si no disuelve\n7. Refrigerar inmediatamente\n\n⚠️ Nunca congelar post-reconstitución con BAC Water.';
+  }
+
+  // ALMACENAMIENTO
+  if (ql.match(/\b(almacen|conserv|guardar|duracion|vida util|cuanto dura|vence|caducidad|heladera|freezer|congel|temperatura)\b/) && ql.match(/\b(peptid|frasco|reconstitu)\b/)) {
+    return '❄️ Almacenamiento:\n\n📦 POLVO LIOFILIZADO:\n• Heladera (2-8°C): meses a 2 años\n• Freezer (-20°C): 3-5 años · Siempre en oscuridad\n\n💉 POST-RECONSTITUCIÓN:\n• BAC Water: 20-30 días en heladera\n• Ácido Acético: 45+ días en heladera\n• CAG Water: 30-40 días\n• ⚠️ NUNCA congelar con BAC Water (benzil alcohol cristaliza)\n\n🔴 Frágiles: Tesamorelina (máx 30d) · SS-31 (máx 20d, sensible a luz) · GHK-Cu (oscuridad estricta) · Follistatin (degradación rápida)\n\n⚠️ El péptido degradado NO cambia de color ni olor.';
+  }
+
+  // CÁLCULO DE DILUCIÓN
+  if (ql.match(/\b(calculo|calcular|cuanto inyecto|cuantas unidades|cuantos ml|concentracion|diluc)\b/)) {
+    return '🧮 Cálculo de Dilución:\n\nFÓRMULA: Dosis (mcg) ÷ Concentración (mcg/mL) = mL · × 100 = unidades\n\n📌 Ej 1: Frasco 5 mg + 1 mL → 5000 mcg/mL\nDosis 500 mcg: 500 ÷ 5000 = 0,1 mL = 10 unidades\n\n📌 Ej 2: Frasco 2 mg + 2 mL → 1000 mcg/mL\nDosis 200 mcg: 200 ÷ 1000 = 0,2 mL = 20 unidades\n\n💡 Para dosis bajas (DSIP 100 mcg, LL-37 15 mcg): usar MÁS solvente para mayor precisión.';
+  }
+
+  // MÉTODO REC
+  if (ql.match(/\b(metodo rec|restaurar estimular|estimular consolidar)\b/) || (ql.includes(' rec ') && ql.match(/\b(que es|explica|filosofia)\b/))) {
+    return '🔬 Método REC:\n\nRESTAURAR → ESTIMULAR → CONSOLIDAR\n\n🔵 RESTAURAR: Resolver inflamación crónica, sanar intestino, corregir deficiencias. Péptidos: BPC-157, KPV, TB-500\n🟢 ESTIMULAR: Activar señalización, GH, BDNF, colágeno. Péptidos: CJC-1295+Ipamorelin, GHK-Cu, Semax\n🟡 CONSOLIDAR: Mantener con fórmulas magistrales y ciclos de mantenimiento. Péptidos: Epitalon, MOTS-C, SS-31';
+  }
+
+  // 7 EJES
+  if (ql.match(/\b(7 ejes|jerarquia|eje inflamatorio|eje mitocondrial|eje neurocentral|eje metabol|eje tisular|eje epigenet|eje anabolico)\b/)) {
+    return '🎯 7 Ejes Biológicos (jerarquía):\n\n1️⃣ Inflamatorio-Inmune → BPC-157, KPV, TB-500\n2️⃣ Mitocondrial-Energético → SS-31, MOTS-C, Humanin\n3️⃣ Neurocentral → Semax, Selank, DSIP, BPC-157\n4️⃣ Metabólico-Incretínico → Tirzepatida, Retatrutida, AOD-9604, MOTS-C, 5-Amino-1MQ\n5️⃣ Tisular-Estructural → GHK-Cu, TB-500, BPC-157, PEG-MGF, LL-37\n6️⃣ Epigenético-Cronobiológico → Epitalon, DSIP, Humanin\n7️⃣ Anabólico-Hormonal → CJC-1295, Ipamorelin, Follistatin, PEG-MGF\n\nSiempre empezar por el eje de menor número que aplique al paciente.';
+  }
+
+  // ERRORES COMUNES
+  if (ql.match(/\b(8 errores|errores que destruyen|que no hacer|como no destruir)\b/)) {
+    return '⚠️ 8 Errores que Destruyen el Péptido:\n\n1. 🚫 Agitar el frasco (rompe estructura 3D)\n2. 🚫 Inyectar solvente directo sobre el polvo\n3. 🚫 Dejarlo fuera de heladera (se degrada en 2-6 h)\n4. 🚫 Exposición a luz solar (SS-31, GHK-Cu son muy sensibles)\n5. 🚫 Jeringa compartida\n6. 🚫 Solvente equivocado (AOD con BAC Water forma hilos)\n7. 🚫 Congelar post-reconstitución con BAC Water\n8. 🚫 Asumir "se ve bien = está bien" (el degradado es idéntico visualmente)';
+  }
+
+  // PROTOCOLOS
+  if (ql.match(/\b(protocolo|stack)\b/)) {
+    if (ql.match(/\b(bulking|volumen|masa muscular|ganar musculo|hipertrofia)\b/)) return '💪 Protocolo Bulking:\n\n🔰 BÁSICO: CJC-1295 200 mcg + Ipamorelin 200 mcg — 2x/noche 5d/sem · Follistatin 100 mcg 3x/sem\n⚡ INTERMEDIO: CJC-1295 300 mcg + Ipamorelin 300 mcg 3x/noche · PEG-MGF 200 mcg post-entreno · BPC-157 250 mcg/día\n🔥 AVANZADO: + GHK-Cu 1 mg/día + Follistatin 100 mcg × 3/sem (4-6 sem)\n\nSolvente: BAC Water. Ciclos 8-16 semanas.';
+    if (ql.match(/\b(cutting|definicion|adelgazar|perder grasa|lipolisis|quema grasa)\b/)) return '🔥 Protocolo Cutting:\n\n• AOD-9604: 250 mcg/día ayunas (Ácido Acético 0,6%)\n• MOTS-C: 5-10 mg/sem SC\n• 5-Amino-1MQ: 50-100 mg oral/día\n• Tirzepatida/Retatrutida: escalada semanal SC\n\nFM-02 (Lipólisis 360°): L-Carnitina 2g + CLA 3g + Capsiate 9mg pre-entreno.\nSinergia: AOD-9604 + L-Carnitina = movilización ácidos grasos potenciada.';
+    if (ql.match(/\b(lesion|herida|tendón|tendon|ligamento|recuperaci|cartilago|fractura|cirugia)\b/)) return '🏥 Protocolo Lesión (3 fases):\n\n🔴 FASE 1 (sem 1-4): BPC-157 500 mcg/día + TB-500 2,5 mg/sem SC\n🟡 FASE 2 (sem 5-8): BPC-157 250 mcg/día + GHK-Cu 1-2 mg/día\n🟢 FASE 3 (sem 9-12): GHK-Cu 1 mg c/2 días + BPC-157 oral 500 mcg ayunas\n\nFM-04 (Matrix Repair): Colágeno 10g + Vit C 1g + Silicio 200mg + Lisina 1g.';
+    if (ql.match(/\b(sueno|sueño|dormir|descanso|insomnio)\b/)) return '😴 Protocolo Sueño:\n\n• DSIP: 100-200 mcg SC, 30 min antes de dormir (4-6 semanas)\n• Epitalon: 5 mg/día SC, ciclos de 10-20 días, 2x/año\n\nFM-03 (Sueño Anabólico): Magnesio Treonato 2g + L-Teanina 200mg + Ashwagandha 300mg + GABA 300mg + Glicina 3g.\nEfecto acumulativo — el impacto real se siente en semanas 2-3.';
+    if (ql.match(/\b(cognitiv|cerebro|memoria|burnout|semax|selank|bdnf)\b/)) return '🧠 Protocolo Neuroregeneration / Burnout:\n\n• Semax: 200-400 mcg intranasal 2x/día (mañana)\n• Selank: 200-400 mcg intranasal (tarde/noche, ansiolítico)\n• BPC-157: 250 mcg/día SC\n\nFM-06 (Mente de Titanio): Lion\'s Mane 1,5g + Bacopa 300mg + Fosfatidilserina 300mg + Alpha-GPC 300mg + PQQ 20mg.\nSinergia Semax+Selank: potenciación BDNF sin sedación.';
+    if (ql.match(/\b(metabolismo|resistencia insulina|insulina|glucosa|diabetes|ampk)\b/)) return '⚡ Protocolo Metabólico / Resistencia Insulínica:\n\n• MOTS-C: 5-10 mg/sem SC\n• 5-Amino-1MQ: 50-100 mg oral/día\n• AOD-9604: 250 mcg/día ayunas\n\nFM-01 (Ultra-AMPK): Berberina 500mg + EGCG 300mg + ALA 300mg + Resveratrol 200mg.\nSinergia: MOTS-C + Berberina = activación AMPK dual. Ideal con ayuno intermitente.';
+    if (ql.match(/\b(endurancia|resistencia atletica|corredor|running|cardio|vo2)\b/)) return '🏃 Protocolo Endurance:\n\n• MOTS-C: 5-10 mg/sem (biogénesis mitocondrial)\n• SS-31: 1-2 mg/día (eficiencia mitocondrial)\n• BPC-157: 250 mcg/día (antiinflamatorio, recuperación)\n• Epitalon: ciclos 10 días, 2x/año\n\nFM-11 (Athlete Recovery): Taurina 2g + Beta-Alanina 2,4g + L-Glutamina 5g + Vit C 1g + Curcumina 500mg.';
+  }
+
+  // FÓRMULAS MAGISTRALES
+  if (ql.match(/\b(formula magistral|magistral|ultra.?ampk|lipolisis 360|sueño anabolico|matrix repair|kpv support|mente.?titanio|mood.?awake|age.?block|libido.?drive|athlete.?recovery|anti.?fatiga)\b/) || ql.match(/\bfm.?\d/)) {
+    if (ql.match(/\bfm.?01\b|ultra.?ampk/)) return '📦 FM-01 Ultra-AMPK:\nBerberina HCl 500mg · EGCG 300mg · ALA 300mg · Resveratrol 200mg · Cromo 200mcg\nUso: Mañana con desayuno. Ciclos 8-12 sem. Sinergia: MOTS-C+Berberina = AMPK dual.';
+    if (ql.match(/\bfm.?02\b|lipolisis.?360/)) return '📦 FM-02 Lipólisis 360°:\nL-Carnitina 2g · Capsiate 9mg · CLA 3g · Piperina 5mg · CoQ10 100mg\nUso: 30-45 min pre-entreno. Sinergia: AOD-9604+L-Carnitina.';
+    if (ql.match(/\bfm.?03\b|sueño.?anabolico/)) return '📦 FM-03 Sueño Anabólico:\nMagnesio Treonato 2g · L-Teanina 200mg · Ashwagandha KSM-66 300mg · GABA 300mg · Glicina 3g · Pasiflora 200mg\nUso: 45-60 min antes de dormir.';
+    if (ql.match(/\bfm.?04\b|matrix.?repair/)) return '📦 FM-04 Matrix Repair:\nVit C 1g · Colágeno I+III 10g · Lisina 1g · Glicina 3g · Prolina 500mg · Silicio orgánico 200mg · Mn 5mg · Cu 2mg\nUso: 30 min pre-entreno o antes de dormir.';
+    if (ql.match(/\bfm.?05\b|kpv.?support|intestino.?regenera/)) return '📦 FM-05 KPV Support:\nGlutamina 5g · Zinc Carnosina 75mg · Aloe Vera 200mg · Quercetina 500mg · DGL 300mg · Probióticos 50B UFC\nUso: Mañana en ayunas. Ciclos 8-12 sem.';
+    if (ql.match(/\bfm.?06\b|mente.?titanio|nootropico/)) return '📦 FM-06 Mente de Titanio:\nLion\'s Mane 1,5g · Bacopa 300mg · Fosfatidilserina 300mg · PQQ 20mg · Alpha-GPC 300mg · Rhodiola 200mg · B12 1mg\nUso: Mañana. Ciclos 8-12 sem.';
+    if (ql.match(/\bfm.?07\b|mood.?awake/)) return '📦 FM-07 Mood Awake:\n5-HTP 100mg · L-Tirosina 500mg · B6-P5P 50mg · Saffron 30mg · Magnesio Treonato 1g · GABA 200mg\nUso: Mañana y media tarde (no de noche).';
+    if (ql.match(/\bfm.?09\b|age.?block|glic|anti.?glicacion/)) return '📦 FM-09 AGE Block Advanced:\nCarnosina 1g · Benfotiamina 150mg · Piridoxamina 50mg · Luteolina 100mg · Romero 200mg · ALA 300mg\nUso: Mañana y noche con comidas.';
+    if (ql.match(/\bfm.?10\b|libido.?drive|testosterona|gonadal/)) return '📦 FM-10 Libido Drive:\nFadogia Agrestis 600mg · Tongkat Ali 200mg · Zinc 25mg · Vit D3 5000UI · Ashwagandha 300mg · Mg 300mg\nUso: Mañana. Ciclos 8 sem ON / 4 sem OFF.';
+    if (ql.match(/\bfm.?11\b|athlete.?recovery/)) return '📦 FM-11 Athlete Recovery:\nTaurina 2g · Beta-Alanina 2,4g · L-Glutamina 5g · Vit C 1g · Curcumina 500mg · Quercetina 500mg · Antocianinas 480mg';
+    if (ql.match(/\bfm.?12\b|anti.?fatiga.?mitoc/)) return '📦 FM-12 Anti-Fatiga Mitocondrial:\nCoQ10 (Ubiquinol) 200-300mg · NMN/NR 300-500mg · Astaxantina 12mg · Urolitina A 500mg · Mg Bisglicinato 400-600mg · Omega-3 2-3g\nUso: Mañana con desayuno.';
+    return '📦 Fórmulas Magistrales (FM-01 a FM-12+):\nCombinaciones de suplementos orales que potencian péptidos. No son inyectables.\n\n• FM-01: Ultra-AMPK (MOTS-C, sensibilidad insulínica)\n• FM-02: Lipólisis 360° (AOD-9604, cutting)\n• FM-03: Sueño Anabólico (DSIP, GH nocturno)\n• FM-04: Matrix Repair (BPC-157, GHK-Cu, lesiones)\n• FM-05: KPV Support (intestino, inflamación GI)\n• FM-06: Mente de Titanio (Semax, nootrópico)\n• FM-07: Mood Awake (dopamina, serotonina)\n• FM-09: AGE Block (anti-glicación, piel)\n• FM-10: Libido Drive (PT-141, eje gonadal)\n• FM-11: Athlete Recovery (post-entreno)\n• FM-12: Anti-Fatiga Mitocondrial (SS-31, MOTS-C)\n\nPreguntá por cualquiera específica.';
+  }
+
+  // PÉPTIDOS INDIVIDUALES
+  const pepDB = {
+    'bpc.?157': { n:'BPC-157', t:'Péptido gastrointestinal / reparador', d:'250-500 mcg/día', v:'SC, IM o oral (500 mcg en ayunas)', f:'Diaria o 2x/día', s:'BAC Water · 20-30 días heladera', o:'Reparación tejido conectivo, tendones, ligamentos, mucosa gástrica, intestino, eje intestino-cerebro.', p:'Lesión fase 1: 500 mcg/día + TB-500 2,5 mg/sem. Fase 2: 250 mcg/día + GHK-Cu. BPC oral para intestino inflamado.', nota:'El más versátil. Efecto sistémico por SC. Se puede usar oral sin perder efecto intestinal.' },
+    'cjc.?1295|cjc1295': { n:'CJC-1295 (sin DAC)', t:'GHRH análogo', d:'100-300 mcg', v:'SC', f:'2-3x/semana o EOD, antes de dormir', s:'BAC Water · 20-30 días', o:'Estimular pulso de GH. Masa muscular, recuperación, sueño, composición corporal.', p:'SIEMPRE combinar con Ipamorelin 1:1. CJC 200 mcg + Ipamorelin 200 mcg en ayunas o antes de dormir.', nota:'Sin DAC = vida media corta. Con DAC = vida media días (dosificación semanal).' },
+    'ipamorelin': { n:'Ipamorelin', t:'GHRP selectivo', d:'100-300 mcg', v:'SC', f:'2-3x/semana, antes de dormir', s:'BAC Water · 20-30 días', o:'Pulso de GH SIN elevar cortisol ni prolactina. El GHRP más seguro y selectivo.', p:'Stack con CJC-1295: efecto sinérgico potente. Ipamorelin 200-300 mcg + CJC-1295 200-300 mcg.', nota:'A diferencia de GHRP-2/GHRP-6: NO eleva cortisol ni prolactina. Ideal uso prolongado.' },
+    'tb.?500|thymosin beta': { n:'TB-500 (Thymosin Beta-4)', t:'Péptido reparación tisular', d:'Carga: 2-2,5 mg/sem. Mantenimiento: 1-2 mg/sem', v:'SC o IM', f:'Semanal', s:'BAC Water · 20-30 días', o:'Cicatrización acelerada, tejido conectivo, músculo. Acción SISTÉMICA — no requiere inyección local.', p:'Lesión: TB-500 2,5 mg/sem + BPC-157 500 mcg/día × 4-6 semanas.', nota:'Efecto sistémico pronunciado — distinto a BPC-157. Se puede inyectar lejos de la lesión.' },
+    'ghk.?cu|glow|ghk': { n:'GHK-Cu (Glow)', t:'Tripéptido de cobre', d:'1-2 mg/día SC o tópico', v:'SC o crema tópica', f:'Diaria o cada 2 días', s:'BAC Water (turbidez leve inicial = normal) · oscuridad estricta · 20-30 días', o:'Síntesis colágeno y elastina, piel, cabello, uñas, neuroprotección, cicatrización.', p:'Protocolo piel/anti-age: GHK-Cu 1 mg/día + Epitalon 5 mg. FM-04 Matrix Repair como soporte oral.', nota:'Sensible a luz. Puede usarse SC o tópico. Sinergiza bien con colágeno oral.' },
+    'aod.?9604': { n:'AOD-9604', t:'Fragmento de GH (aa 176-191)', d:'250-300 mcg/día en ayunas', v:'SC', f:'Diaria', s:'⚠️ Ácido Acético 0,6% — NO BAC Water (forma hilos). 45+ días heladera.', o:'Lipólisis selectiva — quema grasa sin efectos anabólicos de GH. Grasa visceral y subcutánea.', p:'Cutting: AOD-9604 250 mcg + MOTS-C 5 mg/sem + 5-Amino-1MQ 50 mg oral. FM-02 pre-entreno.', nota:'Aplicar 30 min antes del ejercicio para máxima lipólisis. Solvente obligatorio: ácido acético 0,6%.' },
+    'dsip': { n:'DSIP', t:'Neuropéptido del sueño', d:'100-200 mcg', v:'SC, 30-45 min antes de dormir', f:'Diaria o 5x/sem × 4-6 semanas', s:'BAC Water · 20-30 días', o:'Sueño delta profundo, normalizar ritmo circadiano, reducir cortisol nocturno.', p:'Stack sueño: DSIP 100 mcg + Epitalon 5 mg. FM-03 Sueño Anabólico.', nota:'Efecto acumulativo — el impacto real aparece semanas 2-3.' },
+    'epitalon|epitalone|epithalon': { n:'Epitalon', t:'Tetrapéptido epigenético / longevidad', d:'5-10 mg/día', v:'SC o IM', f:'Diario durante ciclo 10-20 días, 2x/año', s:'BAC Water · 20-30 días', o:'Elongación de telómeros, regulación melatonina (glándula pineal), anti-aging, longevidad.', p:'Ciclo 10-20 días 2x/año. Combinado con DSIP para sueño y GHK-Cu para anti-aging.', nota:'Actúa sobre telomerasa. Regula el reloj biológico vía glándula pineal.' },
+    'mots.?c|motsc': { n:'MOTS-C', t:'Péptido mitocondrial (Nueva Era)', d:'5-10 mg/sem', v:'SC', f:'Semanal o 2x/semana', s:'BAC Water · 20-30 días', o:'Activación AMPK, sensibilidad insulínica, biogénesis mitocondrial, longevidad metabólica.', p:'Metabólico: MOTS-C 5-10 mg + 5-Amino-1MQ 50 mg oral + Berberina (FM-01). Cutting: + AOD-9604.', nota:'Codificado en ADN mitocondrial. Sinergia potente con Berberina = AMPK dual.' },
+    'ss.?31|ss31|elamipretide': { n:'SS-31 (Elamipretide)', t:'Péptido mitocondrial', d:'1-5 mg/día', v:'SC', f:'Diaria', s:'BAC Water · ⚠️ máx 20 días · sensible a luz y calor', o:'Protección mitocondrial, eficiencia cadena respiratoria, cardioprotección, nefroprotección.', p:'Trío mitocondrial: SS-31 + MOTS-C + Humanin. FM-12 Anti-Fatiga.', nota:'⚠️ Extremadamente sensible a luz. Proteger siempre. No exceder 20 días reconstituido.' },
+    'humanin': { n:'Humanin', t:'Péptido mitocondrial', d:'2-4 mg/sem', v:'SC', f:'1-2x/semana', s:'BAC Water · 20-30 días', o:'Neuroprotección, anti-apoptosis, longevidad, protección cardiovascular. Declina con la edad.', p:'Trío mitocondrial: Humanin + MOTS-C + SS-31.', nota:'Anti-apoptótico documentado en tejido neuronal y cardíaco.' },
+    '5.amino|5amino|1mq': { n:'5-Amino-1MQ', t:'Inhibidor NNMT (oral)', d:'50-100 mg/día', v:'Oral — cápsulas', f:'Diaria', s:'No requiere reconstitución (oral)', o:'Inhibir NNMT en tejido adiposo, activar AMPK, quemar grasa, mejorar metabolismo energético.', p:'Cutting: 5-Amino-1MQ 50-100 mg + MOTS-C + AOD-9604. FM-01 Ultra-AMPK como soporte.', nota:'Único en su clase: oral activo. No requiere inyección. Sinergia potente con MOTS-C.' },
+    'retatrutid': { n:'Retatrutida', t:'Triple agonista GIP/GLP-1/Glucagon', d:'Escalada: 1→2→4→8→12 mg SC/sem', v:'SC', f:'Semanal', s:'BAC Water · 20-30 días', o:'Máxima pérdida de peso. Estudios fase 3: ~24% pérdida de peso. Mayor que Tirzepatida.', p:'Iniciar 1-2 mg/sem. Escalar cada 4 semanas. Combinar con AOD-9604 y MOTS-C.', nota:'Triple mecanismo: GIP (anorexigénico) + GLP-1 (saciedad/glucosa) + Glucagon (termogénesis/lipólisis hepática).' },
+    'tirzepatida|tirzepatide': { n:'Tirzepatida', t:'Doble agonista GIP/GLP-1', d:'Escalada: 2,5→5→7,5→10→12,5→15 mg/sem', v:'SC', f:'Semanal', s:'BAC Water · 20-30 días', o:'Pérdida de peso (~20% en estudios), control glucémico, composición corporal.', p:'Iniciar 2,5 mg/sem. Mantener dosis 4 sem antes de escalar. No escalar si náuseas persistentes.', nota:'Mounjaro/Zepbound. Aprobada FDA. Más efectiva que semaglutida sola por mecanismo dual GIP+GLP-1.' },
+    'semax': { n:'Semax', t:'Neuropéptido / BDNF', d:'200-600 mcg', v:'Intranasal', f:'2x/día × 4-8 semanas', s:'BAC Water (NO ácido acético para intranasal) · 20-30 días', o:'BDNF, cognición, memoria, concentración, neuroplasticidad, neuroprotección.', p:'Burnout: Semax 400 mcg mañana + Selank 400 mcg tarde + BPC-157 250 mcg/día.', nota:'Semax es activador (mañana). Selank es ansiolítico (tarde/noche). Sinergia documentada.' },
+    'selank': { n:'Selank', t:'Ansiolítico peptídico / inmunomodulador', d:'200-500 mcg intranasal', v:'Intranasal', f:'1-2x/día', s:'BAC Water · 20-30 días', o:'Ansiedad funcional, estrés crónico, inmunomodulación, cognición. Sin sedación ni dependencia.', p:'Combinar con Semax para burnout. Solo: ansiedad y estrés.', nota:'Derivado de Tuftsin. No genera dependencia. Uso largo plazo seguro.' },
+    'kpv': { n:'KPV', t:'Tripéptido antiinflamatorio intestinal', d:'SC: 100-500 mcg/día · Oral: 1-5 mg/día', v:'SC o oral', f:'Diaria', s:'BAC Water (para SC) · 20-30 días', o:'Inflamación intestinal, Crohn, colitis, mucosa GI. Anti-MSH (melanocortina).', p:'FM-05 KPV Support + BPC-157 250 mcg/día (oral o SC) para enfermedad inflamatoria intestinal.', nota:'KPV oral activo en intestino. SC para efecto sistémico rápido. C-terminal de α-MSH.' },
+    'pt.?141|pt141|bremelanotida': { n:'PT-141 (Bremelanotida)', t:'Análogo melanocortina / función sexual', d:'0,5-2 mg', v:'SC, 1-2 h antes', f:'Según necesidad (no diario)', s:'BAC Water · 20-30 días', o:'Disfunción sexual masculina y femenina. Actúa centralmente (cerebro) — distinto a Viagra.', p:'FM-10 Libido Drive como soporte hormonal. Iniciar con 0,5 mg para evaluar tolerancia.', nota:'Aprobado FDA para HSDD femenino (Vyleesi). Náuseas a dosis altas. Mecanismo central, no vascular.' },
+    'melanotan|mt.?ii|mt.?2\b': { n:'Melanotan II', t:'Agonista melanocortina', d:'0,25-1 mg', v:'SC', f:'Diaria o según necesidad', s:'BAC Water · 20-30 días', o:'Bronceado (melanina), función sexual, supresión apetito.', p:'Iniciar 0,25 mg para tolerar (náuseas frecuentes). Luego escalar.', nota:'Menos selectivo que PT-141. Efectos secundarios más frecuentes. Siempre empezar muy bajo.' },
+    'follistat': { n:'Follistatin', t:'Inhibidor miostatina', d:'50-100 mcg 3x/sem', v:'SC o IM', f:'3 veces por semana', s:'BAC Water · ⚠️ degradación muy rápida post-reconstitución', o:'Bloquear miostatina → aumentar masa muscular. Efecto anabólico potente.', p:'Bulking avanzado: Follistatin 100 mcg × 3/sem + CJC+Ipamorelin. Ciclos 4-6 sem máximo.', nota:'⚠️ Muy inestable reconstituido — preparar y usar rápido. Ciclos cortos con descansos iguales.' },
+    'll.?37': { n:'LL-37', t:'Péptido antimicrobiano', d:'15-50 mcg', v:'SC o local', f:'Diaria o c/2 días', s:'BAC Water · 20-30 días', o:'Antimicrobiano, cicatrización heridas, inmunomodulador, anti-biofilm.', p:'Heridas crónicas, úlceras, infecciones. Aplicación local + SC sistémico.', nota:'Dosis muy baja (15 mcg) → usar más solvente para mayor precisión de medición.' },
+    'peg.?mgf': { n:'PEG-MGF', t:'Factor de crecimiento muscular', d:'200-400 mcg', v:'SC o IM local', f:'EOD o 3x/sem post-entreno', s:'BAC Water · 20-30 días', o:'Activar células satélite musculares, hipertrofia, recuperación post-entreno intenso.', p:'Bulking intermedio: PEG-MGF 200 mcg post-entreno + CJC+Ipamorelin nocturno.', nota:'IM local (músculo trabajado) para efecto máximo. PEGilado = mayor vida media que MGF nativo.' }
+  };
+
+  for (const [pat, d] of Object.entries(pepDB)) {
+    if (new RegExp(pat,'i').test(q)) {
+      return `💉 ${d.n}\n\n📋 Tipo: ${d.t}\n💊 Dosis: ${d.d}\n🩺 Vía: ${d.v}\n⏱️ Frecuencia: ${d.f}\n💧 Solvente: ${d.s}\n\n🎯 Objetivo: ${d.o}\n\n📌 Protocolo: ${d.p}\n\n💡 Nota: ${d.nota}`;
+    }
+  }
+
+  // QUÉ ES UN PÉPTIDO
+  if (ql.match(/\b(que es un peptido|que son los peptidos|como funcionan los peptidos)\b/)) {
+    return '🔬 ¿Qué son los Péptidos?\n\nSecuencias cortas de aminoácidos (2-50 aa) que actúan como mensajeros biológicos. Más cortos que proteínas, alta especificidad de receptor.\n\n✅ Ventajas vs hormonas convencionales:\n• Alta selectividad → menos efectos secundarios\n• No se acumulan en tejido\n• Sin supresión del eje hipotalámico-hipofisario (a diferencia de GH exógena)\n\n🎯 Todo depende de: mitocondrias funcionales, ATP disponible, estado redox equilibrado.';
+  }
+
+  return null;
+}
+
 function aiQuery(q) {
   const db = getDB(); const ql = norm(q);
   const months = { enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12 };
@@ -2560,6 +2778,10 @@ function aiQuery(q) {
   if (m1) { const year=m1[3]||new Date().getFullYear(); targetDate=`${year}-${String(months[m1[2].toLowerCase()]).padStart(2,'0')}-${String(parseInt(m1[1])).padStart(2,'0')}`; }
   const m2 = !targetDate && q.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
   if (m2) { const year=m2[3]?(m2[3].length===2?'20'+m2[3]:m2[3]):new Date().getFullYear(); targetDate=`${year}-${String(parseInt(m2[2])).padStart(2,'0')}-${String(parseInt(m2[1])).padStart(2,'0')}`; }
+  // KB check temprano — preguntas de conocimiento peptídico van directo a la base de datos
+  if (ql.match(/\b(que es|para que sirve|como funciona|solvente|bac water|acido acetico|reconstitu|almacen|conserv|congel|formula magistral|metodo rec|7 ejes|8 errores|diluc|cuantas unidades|cuanto inyecto|como preparo|como disuelv)\b/) || ql.match(/\bfm.?\d/)) {
+    const kbEarly = peptidoKB(q); if (kbEarly) return kbEarly;
+  }
   const foundPatient = db.find(p => { const fn=norm(p.datos_personales.nombre), ln=norm(p.datos_personales.apellido); return ql.includes(fn+' '+ln)||ql.includes(fn)||ql.includes(ln); });
   if (targetDate) {
     const results = []; db.forEach(p => (p.historial_consultas||[]).forEach(c => { if (c.fecha===targetDate) { const pago=getConsultaPayment(c); results.push({nombre:`${p.datos_personales.nombre} ${p.datos_personales.apellido}`,c,pago}); } }));
@@ -2620,7 +2842,8 @@ function aiQuery(q) {
   if (ql.match(/\b(activo|activos|en tratamiento|cuantos pacientes)\b/)) { const activos=db.filter(p=>(p.protocolo_peptidos||[]).some(x=>x.activo)); return `👥 ${activos.length} paciente(s) con protocolo activo:\n\n`+activos.map(p=>`• ${p.datos_personales.nombre} ${p.datos_personales.apellido}`).join('\n'); }
   if (ql.match(/\b(cuantos|total|todos|lista|pacientes)\b/)) { return `👥 Total de pacientes: ${db.length}\n\n`+db.map(p=>`• ${p.datos_personales.nombre} ${p.datos_personales.apellido}`).join('\n'); }
   if (foundPatient) { const p=foundPatient, d=p.datos_personales, prots=(p.protocolo_peptidos||[]).filter(x=>x.activo), cons=p.historial_consultas||[], last=cons.length?[...cons].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0]:null; let pag=0,pend=0; cons.forEach(c=>{const pg=getConsultaPayment(c);if(pg.estado_pago==='pagado')pag+=pg.monto;else if(pg.estado_pago==='pendiente')pend+=pg.monto_pendiente;else if(pg.estado_pago==='parcial'){pag+=pg.monto-pg.monto_pendiente;pend+=pg.monto_pendiente;}}); return `👤 ${d.nombre} ${d.apellido}\n\n💉 Péptidos activos: ${prots.length?prots.map(x=>x.peptido).join(', '):'Ninguno'}\n📋 Consultas: ${cons.length}\n📅 Última: ${last?formatDate(last.fecha):'Ninguna'}\n💰 Cobrado: $${pag.toLocaleString('es-AR')} · Pendiente: $${pend.toLocaleString('es-AR')}`; }
-  return `🤔 No pude interpretar tu pregunta. Intentá con:\n\n• ¿Qué pasó el [día] de [mes]?\n• ¿Cuánto me debe [nombre]?\n• Ingresos de [mes]\n• Próximas consultas\n• Pacientes con [péptido]\n• Pacientes activos`;
+  const kbFinal = peptidoKB(q); if (kbFinal) return kbFinal;
+  return `🤔 No pude interpretar tu pregunta. Intentá con:\n\n• ¿Qué pasó el [día] de [mes]?\n• ¿Cuánto me debe [nombre]?\n• Ingresos de [mes]\n• Próximas consultas\n• Pacientes con [péptido]\n• ¿Qué es BPC-157? · Dosis de MOTS-C · Cómo reconstituir\n• Protocolo cutting / bulking / lesión / sueño`;
 }
 
 // ═══════════════════════════════════════════════════
