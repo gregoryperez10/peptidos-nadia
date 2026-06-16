@@ -2779,7 +2779,7 @@ function aiQuery(q) {
   const m2 = !targetDate && q.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
   if (m2) { const year=m2[3]?(m2[3].length===2?'20'+m2[3]:m2[3]):new Date().getFullYear(); targetDate=`${year}-${String(parseInt(m2[2])).padStart(2,'0')}-${String(parseInt(m2[1])).padStart(2,'0')}`; }
   // KB check temprano — preguntas de conocimiento peptídico van directo a la base de datos
-  if (ql.match(/\b(que es|para que sirve|como funciona|solvente|bac water|acido acetico|reconstitu|almacen|conserv|congel|formula magistral|metodo rec|7 ejes|8 errores|diluc|cuantas unidades|cuanto inyecto|como preparo|como disuelv)\b/) || ql.match(/\bfm.?\d/)) {
+  if (ql.match(/\b(que es|que son|para que sirve|para que se usa|como funciona|como se usa|como usar|como se aplica|como aplicar|como se inyecta|cada cuanto|que via|por que via|que dosis|cuanta dosis|beneficios de|efectos de|sirve el|sirve la|solvente|bac water|acido acetico|reconstitu|almacen|conserv|congel|formula magistral|metodo rec|7 ejes|8 errores|diluc|cuantas unidades|cuanto inyecto|como preparo|como disuelv)\b/) || ql.match(/\bfm.?\d/)) {
     const kbEarly = peptidoKB(q); if (kbEarly) return kbEarly;
   }
   const foundPatient = db.find(p => { const fn=norm(p.datos_personales.nombre), ln=norm(p.datos_personales.apellido); return ql.includes(fn+' '+ln)||ql.includes(fn)||ql.includes(ln); });
