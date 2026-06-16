@@ -2770,6 +2770,101 @@ function peptidoKB(q) {
   return null;
 }
 
+// ═══════════════════════════════════════════════════
+//  CORPUS DE CONOCIMIENTO — texto real de los 5 módulos
+//  (chunks indexables para búsqueda semántica BM25)
+// ═══════════════════════════════════════════════════
+const KB_DOCS = [
+  // ───── MÓDULO 01: Fundamentos, Ciencia e Historia ─────
+  { m:1, t:'¿Qué son los péptidos?', x:'Los péptidos son cadenas cortas de aminoácidos, generalmente de 2 a 50 unidades. A diferencia de las grandes proteínas estructurales, actúan como mensajeros moleculares inteligentes. El cuerpo se comunica por lenguaje molecular: cada célula, tejido y órgano responde a hormonas, neurotransmisores, metabolitos y péptidos. Los péptidos se unen a receptores en la membrana celular, el citoplasma, las mitocondrias o el núcleo, desencadenando respuestas precisas: reparación tisular, regeneración celular, modulación metabólica, regulación hormonal, anti-inflamación y optimización energética mitocondrial.' },
+  { m:1, t:'Por qué los péptidos son tan específicos y seguros', x:'Los péptidos ocupan un lugar único entre las moléculas de señalización. A diferencia de las hormonas (acción sistémica) o los neurotransmisores (acción local en la sinapsis), los péptidos pueden actuar de forma local o sistémica según dónde se expresen sus receptores. Especificidad de receptor: cada péptido solo actúa donde hay receptor específico, evitando efectos no deseados. Degradación natural: se metabolizan en aminoácidos reutilizables, no se acumulan en tejidos. Señal temporal: actúan un tiempo limitado y se degradan, permitiendo ciclos precisos. Sinergia biológica: el cuerpo ya tiene la infraestructura para responder; los péptidos exógenos hablan el mismo idioma.' },
+  { m:1, t:'Los 4 niveles donde actúan los péptidos', x:'1) Membrana celular: receptores de superficie (GPCRs, tirosina quinasa) donde actúan la mayoría, activando cascadas PKA, PKC, MAPK. 2) Citoplasma: algunos penetran y modulan vías como PI3K/Akt y AMPK. 3) Mitocondria: péptidos mitocondriales (SS-31, MOTS-C) actúan sobre la membrana interna, protegiendo la cadena respiratoria y reduciendo ROS. 4) Núcleo: péptidos epigenéticos (Epitalon, bioreguladores de Khavinson) modulan directamente la expresión génica.' },
+  { m:1, t:'Mecanismo de llave y cerradura', x:'Cada péptido es como una llave única que encuentra su receptor (la cerradura específica). Cuando encaja, desencadena una respuesta biológica precisa: péptido en sangre → reconoce receptor → se une → activa señal → respuesta celular. Esto explica su perfil de seguridad superior a hormonas exógenas y anabolizantes. La señal puede activar genes, promover síntesis de proteínas, activar cascadas antiinflamatorias o activación mitocondrial. La clave no es solo que activen una señal, sino dónde la activan.' },
+  { m:1, t:'Péptidos vs hormonas, AINEs y anabólicos', x:'Péptidos: especificidad alta (receptor específico), efectos sistémicos bajos, alta reversibilidad (se degradan), perfil de seguridad muy favorable. Hormonas exógenas: especificidad baja, efectos sistémicos altos, baja reversibilidad (supresión del eje), seguridad desfavorable. AINEs: especificidad media, riesgo GI y renal. Anabolizantes: especificidad baja, efectos sistémicos muy altos. La hormona exógena sustituye la señal de tu cuerpo; el péptido refuerza y restaura la señal que ya existe.' },
+  { m:1, t:'Péptidos vs suplementos comunes', x:'Whey protein provee aminoácidos pero es pasivo, sin señalización. Creatina da energía rápida pero sin reparación tisular. EAA aportan síntesis proteica pero no actúan en tendones ni ligamentos. Hormonas exógenas fuerzan el anabolismo con efectos colaterales sistémicos altos. Los péptidos señalizan y regeneran con alta especificidad y bajo colateral. Los péptidos no son un atajo: son la respuesta biológica al estancamiento.' },
+  { m:1, t:'Por qué te estancas: la señalización rota', x:'El problema del estancamiento casi nunca es el esfuerzo, sino la señalización biológica. Cuando el sistema de comunicación molecular se altera por inflamación crónica, resistencia insulínica, mal sueño o disfunción mitocondrial, ninguna cantidad de entrenamiento o nutrición compensa la señal rota. Señalización rota: el cuerpo recibe el estímulo pero no lo traduce en adaptación. Inflamación silenciosa: destruye colágeno, bloquea síntesis proteica. Resistencia insulínica: el músculo no capta glucosa, no crece ni se recupera. Déficit de GH nocturna: sin sueño profundo se pierde el 80% de la señal anabólica.' },
+  { m:1, t:'El ciclo del estancamiento', x:'Entrenás más duro → más microlesiones → más inflamación acumulada → peor recuperación → más cortisol crónico → peor sueño → menos GH nocturna → menos síntesis proteica → sin progreso → frustración → entrenás más duro. Es un círculo vicioso que solo se rompe restaurando la señalización biológica, no añadiendo más esfuerzo.' },
+  { m:1, t:'El declive peptídico con la edad', x:'A partir de los 30 años la producción endógena de muchos péptidos declina de forma progresiva y silenciosa: recuperación más lenta entre entrenamientos, caída en la calidad del sueño profundo y el pico nocturno de GH, aumento de inflamación de bajo grado y acumulación de grasa visceral incluso con dieta adecuada. A los 25-30 años hay un peak peptídico: GHK-Cu, MOTS-C, BPC-157 endógeno y Kisspeptina en niveles óptimos. Los péptidos no son algo extraño: son señales que tu cuerpo ya conoce y necesitaba recordar.' },
+
+  // ───── MÓDULO 03: Método REC, 7 ejes y protocolos ─────
+  { m:3, t:'Método REC: Restaurar, Estimular, Consolidar', x:'El Método REC es la filosofía de protocolos peptídicos en tres etapas. RESTAURAR: resolver inflamación crónica, sanar el intestino y corregir deficiencias (BPC-157, KPV, TB-500). ESTIMULAR: activar la señalización: GH, BDNF, colágeno (CJC-1295 + Ipamorelin, GHK-Cu, Semax). CONSOLIDAR: mantener los resultados con fórmulas magistrales y ciclos de mantenimiento (Epitalon, MOTS-C, SS-31). No se estimula un sistema inflamado: primero se restaura.' },
+  { m:3, t:'Los 7 ejes biológicos (jerarquía de intervención)', x:'La jerarquía para diseñar protocolos, de mayor a menor prioridad: 1) Inflamatorio-Inmune (BPC-157, KPV, TB-500). 2) Mitocondrial-Energético (SS-31, MOTS-C, Humanin). 3) Neurocentral (Semax, Selank, DSIP, BPC-157). 4) Metabólico-Incretínico (Tirzepatida, Retatrutida, AOD-9604, MOTS-C, 5-Amino-1MQ). 5) Tisular-Estructural (GHK-Cu, TB-500, BPC-157, PEG-MGF, LL-37). 6) Epigenético-Cronobiológico (Epitalon, DSIP, Humanin). 7) Anabólico-Hormonal (CJC-1295, Ipamorelin, Follistatin, PEG-MGF). Siempre empezar por el eje de menor número que aplique al paciente.' },
+  { m:3, t:'Protocolo Bulking (volumen muscular)', x:'Básico: CJC-1295 200 mcg + Ipamorelin 200 mcg, 2x/noche, 5 días/semana, más Follistatin 100 mcg 3x/semana. Intermedio: CJC-1295 300 mcg + Ipamorelin 300 mcg 3x/noche, PEG-MGF 200 mcg post-entreno, BPC-157 250 mcg/día. Avanzado: añadir GHK-Cu 1 mg/día y Follistatin 100 mcg x3/semana durante 4-6 semanas. Solvente BAC Water. Ciclos de 8 a 16 semanas. El objetivo es maximizar el pulso de GH nocturno y la hipertrofia.' },
+  { m:3, t:'Protocolo Cutting (definición y pérdida de grasa)', x:'AOD-9604 250 mcg/día en ayunas (reconstituido con ácido acético 0,6%), MOTS-C 5-10 mg/semana SC, 5-Amino-1MQ 50-100 mg oral/día, y agonistas incretínicos (Tirzepatida o Retatrutida) en escalada semanal. Soporte oral con FM-02 Lipólisis 360° (L-Carnitina 2g, CLA 3g, Capsiate 9mg) 30-45 min pre-entreno. Sinergia clave: AOD-9604 + L-Carnitina potencia la movilización de ácidos grasos. Evitar la FM-02 en fases de volumen.' },
+  { m:3, t:'Protocolo Lesión / recuperación de tejidos (3 fases)', x:'Fase 1 (semanas 1-4): BPC-157 500 mcg/día + TB-500 2,5 mg/semana SC para cicatrización aguda. Fase 2 (semanas 5-8): BPC-157 250 mcg/día + GHK-Cu 1-2 mg/día para remodelado de colágeno. Fase 3 (semanas 9-12): GHK-Cu 1 mg cada 2 días + BPC-157 oral 500 mcg en ayunas para consolidación. Soporte oral con FM-04 Matrix Repair (colágeno 10g, vitamina C 1g, silicio 200mg, lisina 1g). Sirve para tendones, ligamentos, cartílago y postquirúrgico.' },
+  { m:3, t:'Protocolo Sueño', x:'DSIP 100-200 mcg SC 30 minutos antes de dormir (ciclo de 4-6 semanas) y Epitalon 5 mg/día SC en ciclos de 10-20 días, 2 veces al año. Soporte oral con FM-03 Sueño Anabólico (Magnesio Treonato 2g, L-Teanina 200mg, Ashwagandha 300mg, GABA 300mg, Glicina 3g). El efecto del DSIP es acumulativo: el impacto real se siente en las semanas 2-3. Mejora el sueño delta profundo y el pico nocturno de GH.' },
+  { m:3, t:'Protocolo Neuroregeneración / Burnout / cognición', x:'Semax 200-400 mcg intranasal 2x/día (en la mañana, activador), Selank 200-400 mcg intranasal (tarde/noche, ansiolítico), BPC-157 250 mcg/día SC. Soporte oral con FM-06 Mente de Titanio (Lion\'s Mane 1,5g, Bacopa 300mg, Fosfatidilserina 300mg, Alpha-GPC 300mg, PQQ 20mg). La sinergia Semax+Selank potencia el BDNF sin sedación. Indicado para claridad mental, memoria de trabajo, neuroinflamación y agotamiento crónico.' },
+  { m:3, t:'Protocolo Metabólico / Resistencia a la insulina', x:'MOTS-C 5-10 mg/semana SC, 5-Amino-1MQ 50-100 mg oral/día, AOD-9604 250 mcg/día en ayunas. Soporte oral con FM-01 Ultra-AMPK (Berberina 500mg, EGCG 300mg, ALA 300mg, Resveratrol 200mg). Sinergia clave: MOTS-C + Berberina activa AMPK de forma dual. Ideal combinar con ayuno intermitente. Mejora la sensibilidad insulínica y el metabolismo energético.' },
+  { m:3, t:'Protocolo Endurance (resistencia atlética)', x:'MOTS-C 5-10 mg/semana (biogénesis mitocondrial), SS-31 1-2 mg/día (eficiencia mitocondrial), BPC-157 250 mcg/día (antiinflamatorio y recuperación), Epitalon en ciclos de 10 días 2x/año. Soporte oral con FM-11 Athlete Recovery (Taurina 2g, Beta-Alanina 2,4g, L-Glutamina 5g, vitamina C 1g, Curcumina 500mg). Aumenta la capacidad aeróbica y la recuperación entre sesiones.' },
+
+  // ───── MÓDULO 04: Nueva Era, clásicos, fracasos y futuro ─────
+  { m:4, t:'El trío más importante de la era moderna', x:'Si tuvieras que elegir 3 péptidos de toda la nueva era (2015-2025) para longevidad y rendimiento: MOTS-C, el símbolo de la era mitocondrial y según muchos el péptido más importante de la longevidad moderna; SS-31 (Elamipretide), la primera molécula que repara mitocondrias, base de cualquier stack mitocondrial serio; y 5-Amino-1MQ, el péptido metabólico definitivo de la década por su mecanismo único de inhibición de NNMT que combina adelgazamiento, longevidad y cognición.' },
+  { m:4, t:'Retatrutida vs Tirzepatida', x:'La diferencia de ~2% en pérdida de peso parece pequeña pero el perfil completo difiere. Retatrutida (triple agonista GIP/GLP-1/Glucagón) mostró mayor reducción de triglicéridos, mayor mejora de presión arterial y mayor reducción de grasa hepática gracias al receptor de glucagón (GCG-R), que aporta beneficios metabólicos más allá del peso. Status 2025: Retatrutida en Fase III, aprobación FDA esperada entre 2026-2027. Tirzepatida (doble agonista GIP/GLP-1) ya está aprobada (Mounjaro/Zepbound).' },
+  { m:4, t:'Péptidos que fallaron (para no caer en el hype)', x:'No todo lo creado entre 2015 y 2025 funcionó. FOXO4-DRI (senolítico para eliminar células zombie): tóxico en algunas vías, riesgo inflamatorio, excelente en ratones pero pésimo en humanos; abandonado. SR-0379 (súper regenerador): no escaló a uso humano. Anti-miostatina de 2ª generación y ACE-031: superados o muertos por toxicidad. GDF-11 modificado: prometía revertir el envejecimiento pero tuvo efectos colaterales peligrosos. Agonistas de oxitocina (2017-2020): hype emocional sin constancia, desaparecieron.' },
+  { m:4, t:'Por qué fallan los péptidos con hype', x:'El problema del modelo animal: la mayoría funcionó perfecto en ratones pero el salto a humanos falla por diferencias de metabolismo, distribución, receptores y respuesta inmune. La toxicidad tardía: parecen seguros en estudios cortos pero muestran toxicidad en uso prolongado (FOXO4-DRI). La especificidad: actúan en múltiples receptores con efectos secundarios no anticipados. El hype prematuro: comunidades online los adoptan antes de tener datos. Regla de oro: esperar al menos 2-3 años de uso documentado; los primeros 12-18 meses son de máximo hype y mínima evidencia.' },
+  { m:4, t:'Por qué explotó el mundo de los péptidos', x:'El mercado global superó los $40 mil millones en 2024 y se proyecta $80 mil millones para 2030. Razones: la medicina se cansó de tratar solo síntomas (los péptidos actúan en la causa raíz); EE.UU. impulsó clínicas, cursos y congresos; GLP-1 (Semaglutida/Tirzepatida) llevó los péptidos al mainstream; la nueva era de longevidad puso foco en la energía celular; resultados perceptibles y medibles; biohackers con audiencias masivas (Huberman, Sinclair, Attia, Bryan Johnson); y síntesis más barata y accesible.' },
+  { m:4, t:'El efecto Ozempic', x:'Semaglutida (Ozempic/Wegovy) fue el catalizador que llevó los péptidos al mainstream global. Cuando millones empezaron a perder peso con una inyección semanal, la pregunta inevitable fue "¿qué otros péptidos existen?". Antes de 2021 los péptidos eran territorio de atletas y biohackers. Entre 2021-2023 las búsquedas de "péptidos" en Google aumentaron 400%. Entre 2023-2025 personas que nunca habían oído de BPC-157 o MOTS-C empezaron a investigar y la demanda de información de calidad explotó.' },
+  { m:4, t:'El futuro de los péptidos (2025-2035)', x:'La próxima década será un salto cualitativo, no una evolución lineal. Foco en longevidad extrema, energía celular, regeneración completa, recomposición avanzada, modulación epigenética y estética molecular. Mitocondriales 2.0 (MC-220, MC-301) estimulan PGC-1α más que MOTS-C. Senolíticos peptídicos de 2ª generación (SP-14). Klotho-MIM en ensayos de envejecimiento. Tri y tetra agonistas metabólicos (NA-931/Bioglutide). Más de 200 péptidos en ensayos clínicos activos y $15 mil millones anuales de inversión. El mercado de investigación siempre llega antes que la aprobación regulatoria.' },
+
+  // ───── MÓDULO 05: Reconstitución, seguridad y fórmulas ─────
+  { m:5, t:'Por qué una mala reconstitución destruye el péptido', x:'Podés destruir el mejor péptido por un error de reconstitución. La molécula es una estructura tridimensional frágil: temperatura incorrecta, agitación excesiva, pH inadecuado o solvente equivocado colapsan su estructura y pierde actividad biológica de forma irreversible. El péptido degradado no avisa: no cambia de color, no huele distinto, no precipita; simplemente no funciona. Tres pilares: solvente adecuado, técnica correcta y almacenamiento estable.' },
+  { m:5, t:'Elección del solvente (BAC, ácido acético, CAG)', x:'BAC Water (agua bacteriostática, agua estéril + 0,9% benzil alcohol) sirve para BPC-157, CJC-1295, Ipamorelin, DSIP, Semax, Selank, TB-500, MOTS-C, 5-Amino-1MQ, GHK-Cu, LL-37, Humanin, SS-31, Epitalon, KPV, Follistatin, PEG-MGF, PT-141 y Melanotan II; estabilidad 20-30 días en heladera. Ácido Acético 0,6% para AOD-9604, GHRPs duros y IGF-1 LR3 (el pH ácido disuelve péptidos hidrofóbicos y evita los hilos); 45+ días; NO usar para aplicaciones intranasales. CAG Water para Tesamorelina (muy frágil), AOD-9604 difícil y mitocondriales de 2ª generación; 30-40 días.' },
+  { m:5, t:'Técnica de reconstitución paso a paso', x:'1) Limpiar la tapa de goma de ambos frascos con algodón y alcohol 70%. 2) Aspirar el solvente calculado en jeringa de insulina de 1 mL (aguja 27-31G). 3) Insertar la aguja en la pared lateral del frasco, NO en el centro ni sobre el polvo. 4) Empujar el solvente por la pared para que escurra suavemente sobre el polvo. 5) NO agitar: inclinar y girar con movimientos suaves, esperar 5-15 minutos. 6) Solución lista (transparente o levemente turbia), refrigerar inmediatamente. Si no disuelve: calentar entre las palmas 1-2 minutos. GHK-Cu puede tener turbidez inicial normal.' },
+  { m:5, t:'Los 8 errores que destruyen el péptido', x:'1) Agitar el frasco como jugo (rompe los puentes de hidrógeno y la estructura 3D). 2) Inyectar el solvente directo sobre el polvo (mezcla no homogénea). 3) Dejarlo fuera de la heladera (se degrada en 2-6 horas). 4) Exponerlo a luz solar directa (foto-oxidación, fatal para SS-31, GHK-Cu y péptidos con triptófano). 5) Usar jeringa compartida (contaminación cruzada). 6) Solvente equivocado (AOD-9604 con BAC Water forma hilos). 7) Congelar post-reconstitución con BAC Water (el benzil alcohol cristaliza). 8) Asumir que "se ve bien = está bien": el degradado es visualmente idéntico.' },
+  { m:5, t:'Tabla de almacenamiento y vida útil', x:'Polvo liofilizado en heladera (2-8°C): meses a 2 años. Polvo en freezer (-20°C): 3-5 años. Siempre en oscuridad. Reconstituido con BAC Water: 20-30 días en heladera. Reconstituido con ácido acético: 45+ días. Reconstituido con CAG Water: 30-40 días. Nunca congelar reconstituido con BAC Water. Péptidos frágiles: Tesamorelina (CAG Water, máx 30 días), SS-31 (sensible a luz y calor, máx 20 días), GHK-Cu (oscuridad estricta), Follistatin (degradación rápida).' },
+  { m:5, t:'Cálculo de dilución y dosis', x:'Fórmula: dosis deseada (mcg) ÷ concentración (mcg/mL) = volumen a inyectar (mL); multiplicar por 100 para unidades de jeringa insulínica (1 mL = 100 unidades, cada unidad = 0,01 mL). Ejemplo 1: frasco 5 mg + 1 mL = 5000 mcg/mL; para 500 mcg → 500÷5000 = 0,1 mL = 10 unidades. Ejemplo 2: frasco 2 mg + 2 mL = 1000 mcg/mL; para 200 mcg → 0,2 mL = 20 unidades. Para dosis bajas (DSIP 100 mcg, LL-37 15 mcg) usar más solvente para mayor precisión.' },
+  { m:5, t:'Señales de que el péptido se degradó', x:'Degradación visible: color amarillo o marrón (antes transparente), precipitado que no se disuelve al girar, olor inusual (ácido fuerte o amoniaco), GHK-Cu muy oscuro (oxidación del cobre), solución viscosa o aceitosa. Posible degradación invisible: reconstitución incorrecta, almacenamiento fuera de heladera, exposición a luz solar, más de 45 días reconstituido, múltiples congelaciones del polvo. Ante la duda: descartar y abrir un frasco nuevo; el costo de un frasco es menor al de un protocolo que no funciona.' },
+  { m:5, t:'Preparación celular antes del protocolo', x:'Toda señalización tiene costo energético y depende de mitocondrias sanas. 2-4 semanas antes del protocolo: Vitamina D3 5000-10000 UI/día (modulación inmune y hormonal), Magnesio Bisglicinato 400-600 mg en la noche (cofactor de 300+ enzimas), Zinc 25 mg + Cobre 2 mg (síntesis de GHK-Cu endógeno), CoQ10 200-300 mg (cadena respiratoria), Omega-3 2-3 g EPA+DHA (anti-inflamación de membrana), NMN o NR 300-500 mg (precursor de NAD+), Astaxantina 12 mg (antioxidante mitocondrial), Urolitina A 500 mg (mitofagia). El organismo preparado responde con dosis menores y mejores resultados.' },
+  { m:5, t:'Qué son las Fórmulas Magistrales', x:'Las Fórmulas Magistrales (FM) son combinaciones de suplementos orales de alta calidad, no péptidos inyectables, diseñadas para potenciar objetivos específicos, preparar el terreno biológico y sostener resultados entre ciclos. Amplifican la respuesta optimizando el entorno celular, llenan deficiencias nutricionales que bloquean receptores, y mantienen beneficios entre ciclos. Son de uso autónomo (cápsulas o polvos diarios) sin prescripción. Hay 20 numeradas y organizadas por objetivo. Trabajan en conjunto con los péptidos como amplificador de señal, no como sustituto.' }
+];
+
+// ── Motor de búsqueda BM25 sobre el corpus ──
+let _kbIndex = null;
+function kbTokens(s) {
+  return norm(s).replace(/[^a-z0-9ñ\s-]/g,' ').split(/\s+/)
+    .filter(t => t.length > 2)
+    .map(t => t.replace(/(ciones|cion|mente|es|os|as|ar|er|ir|s)$/,'').replace(/-/g,''))
+    .filter(t => t.length > 1);
+}
+function buildKBIndex() {
+  if (_kbIndex) return _kbIndex;
+  const stop = new Set(['que','para','con','por','del','los','las','una','uno','como','mas','muy','este','esta','estos','estas','son','sus','sin','pero','entre','cuando','donde','cada','tod','tien','hac','pued','deb','ser','est','hay']);
+  const docs = KB_DOCS.map((d,i) => {
+    const toks = [...kbTokens(d.t), ...kbTokens(d.t), ...kbTokens(d.x)].filter(t => !stop.has(t));
+    const tf = {}; toks.forEach(t => tf[t] = (tf[t]||0)+1);
+    return { i, t:d.t, x:d.x, m:d.m, tf, len:toks.length };
+  });
+  const df = {}; docs.forEach(d => Object.keys(d.tf).forEach(t => df[t] = (df[t]||0)+1));
+  const avgdl = docs.reduce((s,d)=>s+d.len,0) / docs.length;
+  _kbIndex = { docs, df, N:docs.length, avgdl };
+  return _kbIndex;
+}
+function buscarKB(query, topN) {
+  const idx = buildKBIndex();
+  const qToks = [...new Set(kbTokens(query))];
+  if (!qToks.length) return [];
+  const k1 = 1.5, b = 0.72;
+  const scored = idx.docs.map(d => {
+    let score = 0;
+    qToks.forEach(t => {
+      const f = d.tf[t] || 0; if (!f) return;
+      const idf = Math.log(1 + (idx.N - idx.df[t] + 0.5) / (idx.df[t] + 0.5));
+      score += idf * (f * (k1+1)) / (f + k1 * (1 - b + b * d.len / idx.avgdl));
+    });
+    return { d, score };
+  }).filter(x => x.score > 0).sort((a,b) => b.score - a.score);
+  return scored.slice(0, topN || 3);
+}
+function responderKB(query) {
+  const hits = buscarKB(query, 3);
+  if (!hits.length || hits[0].score < 1.2) return null;
+  const top = hits[0].d;
+  let resp = `📚 ${top.t} (Módulo ${top.m})\n\n${top.x}`;
+  const otros = hits.slice(1).filter(h => h.score >= hits[0].score * 0.45);
+  if (otros.length) resp += `\n\n🔎 También relevante: ${otros.map(h => h.d.t).join(' · ')}\n(Preguntá por cualquiera para ver el detalle.)`;
+  return resp;
+}
+
 function aiQuery(q) {
   const db = getDB(); const ql = norm(q);
   const months = { enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12 };
@@ -2782,7 +2877,11 @@ function aiQuery(q) {
   if (ql.match(/\b(que es|que son|para que sirve|para que se usa|como funciona|como se usa|como usar|como se aplica|como aplicar|como se inyecta|cada cuanto|que via|por que via|que dosis|cuanta dosis|beneficios de|efectos de|sirve el|sirve la|solvente|bac water|acido acetico|reconstitu|almacen|conserv|congel|formula magistral|metodo rec|7 ejes|8 errores|diluc|cuantas unidades|cuanto inyecto|como preparo|como disuelv)\b/) || ql.match(/\bfm.?\d/)) {
     const kbEarly = peptidoKB(q); if (kbEarly) return kbEarly;
   }
-  const foundPatient = db.find(p => { const fn=norm(p.datos_personales.nombre), ln=norm(p.datos_personales.apellido); return ql.includes(fn+' '+ln)||ql.includes(fn)||ql.includes(ln); });
+  // Prioridad: nombre completo → apellido → nombre suelto (evita confundir dos "Maria")
+  const foundPatient =
+    db.find(p => { const fn=norm(p.datos_personales.nombre), ln=norm(p.datos_personales.apellido); return fn&&ln&&ql.includes(fn+' '+ln); }) ||
+    db.find(p => { const ln=norm(p.datos_personales.apellido); return ln&&ln.length>2&&ql.includes(ln); }) ||
+    db.find(p => { const fn=norm(p.datos_personales.nombre); return fn&&fn.length>2&&ql.includes(fn); });
   if (targetDate) {
     const results = []; db.forEach(p => (p.historial_consultas||[]).forEach(c => { if (c.fecha===targetDate) { const pago=getConsultaPayment(c); results.push({nombre:`${p.datos_personales.nombre} ${p.datos_personales.apellido}`,c,pago}); } }));
     if (!results.length) return `📭 No encontré consultas para el ${formatDate(targetDate)}.`;
@@ -2837,13 +2936,21 @@ function aiQuery(q) {
   let matchedPep=''; for (const k of pepKeys) { if (ql.includes(k)){matchedPep=k;break;} }
   if (matchedPep || ql.match(/\b(peptid|dosis|protocolo)\b/)) {
     if (foundPatient) { const p=foundPatient, nombre=`${p.datos_personales.nombre} ${p.datos_personales.apellido}`, prots=(p.protocolo_peptidos||[]).filter(x=>!matchedPep||norm(x.peptido).includes(matchedPep)); if(!prots.length) return `💉 ${nombre} no tiene ${matchedPep||'péptidos'} en su protocolo.`; return `💉 Protocolo de ${nombre}:\n\n`+prots.map(x=>{let line=`• ${x.peptido} (${x.activo?'activo':'finalizado'})`; if(x.dosis_mg) line+=` · ${x.dosis_mg} mg`; if(x.unidades) line+=` / ${x.unidades} U`; if(x.frecuencia) line+=` · ${x.frecuencia}`; return line;}).join('\n'); }
-    if (matchedPep) { const pacs=db.filter(p=>(p.protocolo_peptidos||[]).some(x=>norm(x.peptido).includes(matchedPep))); if(!pacs.length) return `💉 Ningún paciente tiene ${matchedPep}.`; return `💉 Pacientes con ${matchedPep} (${pacs.length}):\n\n`+pacs.map(p=>`• ${p.datos_personales.nombre} ${p.datos_personales.apellido}`).join('\n'); }
+    if (matchedPep) {
+      const esPregunta = ql.match(/\b(que es|que son|para que|como|por que|efecto|beneficio|sirve|dosis|via|reconstitu|protocolo|explica|cuent|sobre)\b/);
+      const pacs=db.filter(p=>(p.protocolo_peptidos||[]).some(x=>norm(x.peptido).includes(matchedPep)));
+      if (esPregunta) { const kb=peptidoKB(q)||responderKB(q); if(kb) return kb; }
+      if(pacs.length) return `💉 Pacientes con ${matchedPep} (${pacs.length}):\n\n`+pacs.map(p=>`• ${p.datos_personales.nombre} ${p.datos_personales.apellido}`).join('\n');
+      const kb2=peptidoKB(q)||responderKB(q); if(kb2) return kb2;
+      return `💉 Ningún paciente tiene ${matchedPep}.`;
+    }
   }
   if (ql.match(/\b(activo|activos|en tratamiento|cuantos pacientes)\b/)) { const activos=db.filter(p=>(p.protocolo_peptidos||[]).some(x=>x.activo)); return `👥 ${activos.length} paciente(s) con protocolo activo:\n\n`+activos.map(p=>`• ${p.datos_personales.nombre} ${p.datos_personales.apellido}`).join('\n'); }
   if (ql.match(/\b(cuantos|total|todos|lista|pacientes)\b/)) { return `👥 Total de pacientes: ${db.length}\n\n`+db.map(p=>`• ${p.datos_personales.nombre} ${p.datos_personales.apellido}`).join('\n'); }
   if (foundPatient) { const p=foundPatient, d=p.datos_personales, prots=(p.protocolo_peptidos||[]).filter(x=>x.activo), cons=p.historial_consultas||[], last=cons.length?[...cons].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0]:null; let pag=0,pend=0; cons.forEach(c=>{const pg=getConsultaPayment(c);if(pg.estado_pago==='pagado')pag+=pg.monto;else if(pg.estado_pago==='pendiente')pend+=pg.monto_pendiente;else if(pg.estado_pago==='parcial'){pag+=pg.monto-pg.monto_pendiente;pend+=pg.monto_pendiente;}}); return `👤 ${d.nombre} ${d.apellido}\n\n💉 Péptidos activos: ${prots.length?prots.map(x=>x.peptido).join(', '):'Ninguno'}\n📋 Consultas: ${cons.length}\n📅 Última: ${last?formatDate(last.fecha):'Ninguna'}\n💰 Cobrado: $${pag.toLocaleString('es-AR')} · Pendiente: $${pend.toLocaleString('es-AR')}`; }
   const kbFinal = peptidoKB(q); if (kbFinal) return kbFinal;
-  return `🤔 No pude interpretar tu pregunta. Intentá con:\n\n• ¿Qué pasó el [día] de [mes]?\n• ¿Cuánto me debe [nombre]?\n• Ingresos de [mes]\n• Próximas consultas\n• Pacientes con [péptido]\n• ¿Qué es BPC-157? · Dosis de MOTS-C · Cómo reconstituir\n• Protocolo cutting / bulking / lesión / sueño`;
+  const kbBusqueda = responderKB(q); if (kbBusqueda) return kbBusqueda;
+  return `🤔 No encontré nada relevante en la base de conocimiento ni en los pacientes. Intentá con:\n\n• ¿Qué pasó el [día] de [mes]?\n• ¿Cuánto me debe [nombre]?\n• Ingresos de [mes] · Próximas consultas · Pacientes con [péptido]\n• ¿Qué es BPC-157? · Dosis de MOTS-C · Cómo reconstituir\n• Protocolo cutting / bulking / lesión / sueño\n• ¿Por qué fallan los péptidos? · El efecto Ozempic · Método REC`;
 }
 
 // ═══════════════════════════════════════════════════
