@@ -1653,7 +1653,7 @@ function buildImcGauge(imc, peso, alturaNum, sexo) {
     idealHtml = `<div style="font-size:12px;color:var(--on-surface-variant);margin-top:6px">Peso ideal estimado: <strong style="color:var(--on-surface)">${ideal} kg</strong>${diff!=null?' · <span style="color:'+cat.c+'">'+diffStr+'</span>':''}</div>`;
   }
   return `<div style="text-align:center">
-    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="max-width:100%;overflow:visible">${arcs}${ticks}
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:100%;height:auto;overflow:visible">${arcs}${ticks}
       <line id="${uid}" x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy-R+5}" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" class="imc-needle-anim" data-rot="${cssRot}" style="transform-origin:${cx}px ${cy}px;transform:rotate(-90deg)"/>
       <circle cx="${cx}" cy="${cy}" r="7" fill="#0f172a"/><circle cx="${cx}" cy="${cy}" r="3.5" fill="#f8fafc"/>
       <text x="6" y="${cy+15}" font-size="8.5" fill="#3b82f6" font-weight="700">Bajo</text>
@@ -1663,6 +1663,43 @@ function buildImcGauge(imc, peso, alturaNum, sexo) {
     <div style="font-size:34px;font-weight:800;color:${cat.c};line-height:1;margin-top:-4px">${imc}</div>
     <span style="background:${cat.bg};color:${cat.c};padding:3px 14px;border-radius:20px;font-size:12px;font-weight:700">${cat.l}</span>
     ${idealHtml}
+  </div>`;
+}
+
+function buildPesoChart(records) {
+  // Evolución de peso a lo largo del tiempo — funciona solo con peso (no requiere altura)
+  const pts = (records||[])
+    .filter(r => r.peso && parseFloat(r.peso) > 0 && r.fecha)
+    .map(r => ({ fecha: r.fecha, peso: parseFloat(r.peso) }))
+    .sort((a,b) => (a.fecha||'').localeCompare(b.fecha||''));
+  if (pts.length < 2) return '';
+  const W=320, H=150, padX=34, padTop=22, padBot=30;
+  const pesos = pts.map(p=>p.peso);
+  let min=Math.min(...pesos), max=Math.max(...pesos);
+  if (min===max) { min-=1; max+=1; } else { const m=(max-min)*0.15; min-=m; max+=m; }
+  const x = i => padX + (pts.length===1?0:i/(pts.length-1))*(W-padX*2);
+  const y = v => padTop + (1-(v-min)/(max-min))*(H-padTop-padBot);
+  const coords = pts.map((p,i)=>[+x(i).toFixed(1),+y(p.peso).toFixed(1)]);
+  const linePts = coords.map(c=>c.join(',')).join(' ');
+  const areaPts = `${coords[0][0]},${H-padBot} ${linePts} ${coords[coords.length-1][0]},${H-padBot}`;
+  const grid = [0,0.5,1].map(f=>{const gy=padTop+f*(H-padTop-padBot);return `<line x1="${padX}" y1="${gy.toFixed(1)}" x2="${W-padX}" y2="${gy.toFixed(1)}" stroke="#e5e7eb" stroke-width="1"/>`;}).join('');
+  const dots = coords.map((c,i)=>`<circle cx="${c[0]}" cy="${c[1]}" r="3.5" fill="#0051d5"/>${(i===0||i===pts.length-1)?`<text x="${c[0]}" y="${c[1]-9}" font-size="10" font-weight="700" fill="#0051d5" text-anchor="middle">${pts[i].peso}</text>`:''}`).join('');
+  const fmt = f => { const parts=String(f).split('-'); return parts.length===3?parts[2]+'/'+parts[1]:f; };
+  const xLabels = `<text x="${coords[0][0]}" y="${H-10}" font-size="9" fill="#94a3b8" text-anchor="start">${fmt(pts[0].fecha)}</text><text x="${coords[coords.length-1][0]}" y="${H-10}" font-size="9" fill="#94a3b8" text-anchor="end">${fmt(pts[pts.length-1].fecha)}</text>`;
+  const delta = +(pts[pts.length-1].peso - pts[0].peso).toFixed(1);
+  const deltaStr = delta===0?'Sin cambio':(delta>0?`+${delta} kg`:`${delta} kg`);
+  const deltaCol = delta>0?'#d97706':delta<0?'#059669':'#64748b';
+  return `<div class="imc-gauge-card" style="text-align:left">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant)">📈 Evolución de peso</div>
+      <span style="font-size:12px;font-weight:700;color:${deltaCol}">${deltaStr}</span>
+    </div>
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+      ${grid}
+      <polyline points="${areaPts}" fill="rgba(0,81,213,0.07)" stroke="none"/>
+      <polyline points="${linePts}" fill="none" stroke="#0051d5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}${xLabels}
+    </svg>
   </div>`;
 }
 
@@ -1694,13 +1731,21 @@ function renderTabResultados(p) {
       <div class="imc-gauge-row">
         ${buildImcGauge(imcVal, pesoVal, altVal, d.sexo)}
       </div>
-    </div>` : '';
+    </div>`
+    : (pesoVal ? `
+    <div class="imc-gauge-card" style="text-align:center;color:var(--on-surface-variant);font-size:13px">
+      📊 Peso actual: <strong style="color:var(--on-surface)">${pesoVal} kg</strong><br>
+      <span style="font-size:12px">Cargá la <strong>altura</strong> del paciente para ver el gráfico de IMC.</span>
+    </div>` : '');
+
+  const pesoChartHtml = buildPesoChart(res);
 
   return `
     <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
       <button class="btn btn-primary" onclick="openModalResultado('${p.id}',null)">➕ Nuevo Registro</button>
     </div>
     ${gaugeHtml}
+    ${pesoChartHtml}
     ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Registrá el peso, laboratorios y observaciones</p></div>` : ''}
     ${sorted.map(r => {
       const origI = res.indexOf(r);
@@ -2026,6 +2071,7 @@ function openModalConsulta(pacienteId, idx) {
   const c = idx !== null ? p.historial_consultas[idx] : null;
   const isCortesia = c?.cortesia || false;
   const metodo = c?.metodo_pago || 'efectivo';
+  const cMed = c ? ((p.resultados||[]).find(r => r.fecha === c.fecha) || {}) : {};
   openModal(`<div class="modal">
     <div class="modal-header">
       <h3>🗂️ ${c ? 'Editar Consulta' : 'Nueva Consulta'}</h3>
@@ -2041,6 +2087,17 @@ function openModalConsulta(pacienteId, idx) {
         <label>Notas clínicas</label>
         <textarea id="c-notas" rows="3" placeholder="Observaciones, respuesta al tratamiento, cambios en el protocolo...">${esc(c?.notas||'')}</textarea>
       </div>
+
+      <hr style="margin:14px 0;border:none;border-top:1px solid var(--gray-200)">
+      <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--gray-700)">📏 Medidas del paciente <span style="font-size:11px;font-weight:500;color:var(--gray-400)">(opcional — se guarda en Evolución)</span></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" id="c-peso" value="${esc(String(cMed?.peso||''))}" placeholder="Ej: 65.5" oninput="calcImcConsulta()"></div>
+        <div class="form-group"><label>Altura (cm)</label><input type="number" step="1" id="c-altura" value="${esc(String(cMed?.altura||p.datos_personales.altura||''))}" placeholder="Ej: 165" oninput="calcImcConsulta()"></div>
+        <div class="form-group"><label>Tensión arterial</label><input type="text" id="c-tension" value="${esc(cMed?.tension||'')}" placeholder="Ej: 120/80"></div>
+        <div class="form-group"><label>Glucemia (mg/dL)</label><input type="text" id="c-glucemia" value="${esc(cMed?.glucemia||'')}" placeholder="Ej: 95"></div>
+      </div>
+      <div id="c-imc-preview" style="margin:4px 0 2px;min-height:20px"></div>
+
       <hr style="margin:14px 0;border:none;border-top:1px solid var(--gray-200)">
 
       <!-- Toggle cortesía -->
@@ -2092,6 +2149,19 @@ function openModalConsulta(pacienteId, idx) {
       <button class="btn btn-primary" onclick="guardarConsulta('${pacienteId}',${idx})">💾 Guardar</button>
     </div>
   </div>`);
+  setTimeout(calcImcConsulta, 60);
+}
+
+function calcImcConsulta() {
+  const peso = parseFloat(document.getElementById('c-peso')?.value);
+  const alt  = parseFloat(document.getElementById('c-altura')?.value);
+  const prev = document.getElementById('c-imc-preview');
+  if (!prev) return;
+  if (peso && alt && alt > 0) {
+    const imc = +(peso / Math.pow(alt/100, 2)).toFixed(1);
+    const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
+    prev.innerHTML = `<span style="font-weight:700;font-size:14px;color:${cat.c}">IMC ${imc}</span> <span style="font-size:12px;color:${cat.c}">${cat.l}</span>`;
+  } else { prev.innerHTML = ''; }
 }
 
 function toggleCortesiaModal(checked) {
@@ -2127,6 +2197,26 @@ function guardarConsulta(pacienteId, idx) {
     cortesia: isCortesia,
   };
   if (idx !== null) p.historial_consultas[idx] = data; else p.historial_consultas.push(data);
+
+  // Medidas → se guardan en Evolución (upsert por fecha) sin tener que ir a esa pestaña
+  const mPeso = document.getElementById('c-peso')?.value || '';
+  const mAlt  = document.getElementById('c-altura')?.value || '';
+  const mTen  = document.getElementById('c-tension')?.value || '';
+  const mGlu  = document.getElementById('c-glucemia')?.value || '';
+  if (mPeso || mAlt || mTen || mGlu) {
+    if (mAlt)  p.datos_personales.altura = mAlt;
+    if (mPeso) p.datos_personales.peso   = mPeso;
+    const imc = (mPeso && mAlt && parseFloat(mAlt)>0) ? +(parseFloat(mPeso)/Math.pow(parseFloat(mAlt)/100,2)).toFixed(1) : '';
+    if (!p.resultados) p.resultados = [];
+    let r = p.resultados.find(x => x.fecha === fecha);
+    if (r) {
+      if (mPeso) r.peso=mPeso; if (mAlt) r.altura=mAlt; if (imc) r.imc=imc;
+      if (mTen) r.tension=mTen; if (mGlu) r.glucemia=mGlu;
+    } else {
+      p.resultados.push({ fecha, peso:mPeso, altura:mAlt, imc, tension:mTen, glucemia:mGlu, laboratorios:'', observaciones:'Registrado desde consulta' });
+    }
+  }
+
   savePaciente(p); closeModal();
   showToast('✅ Consulta guardada', 'success');
   profileTab = 'consultas'; navigate('perfil', pacienteId);
@@ -3005,11 +3095,11 @@ function calcMgDescartadoPorPeptido() {
 
 function getInventarioPeptidos() {
   const compras=getCompras(), map={};
-  compras.forEach(c => { const n=(c.peptido||'').trim(); if(!n) return; if(!map[n]) map[n]={nombre:n,mg_total:0,entradas:0}; map[n].mg_total+=(c.mg||0); map[n].entradas++; });
+  compras.forEach(c => { const n=(c.peptido||'').trim(); if(!n) return; if(!map[n]) map[n]={nombre:n,mg_total:0,mg_personal:0,entradas:0}; map[n].mg_total+=(c.mg||0); map[n].mg_personal+=(parseFloat(c.mg_uso_personal)||0); map[n].entradas++; });
   const uso=calcMgUsadoPorPeptido(), desc=calcMgDescartadoPorPeptido();
   return Object.values(map).map(item => {
     const u=uso[item.nombre]||{mg_usado:0,detalle:[]}, mg_descartado=desc[item.nombre]||0;
-    const mg_consumido_total=parseFloat((u.mg_usado+mg_descartado).toFixed(3));
+    const mg_consumido_total=parseFloat((u.mg_usado+mg_descartado+(item.mg_personal||0)).toFixed(3));
     const mg_disponible=parseFloat(Math.max(0,item.mg_total-mg_consumido_total).toFixed(3));
     const pct=item.mg_total>0?Math.min(100,Math.round(mg_consumido_total/item.mg_total*100)):0;
     return Object.assign({},item,{mg_usado:u.mg_usado,mg_descartado,mg_disponible,pct_usado:pct,detalle_uso:u.detalle});
@@ -3033,21 +3123,25 @@ function buildPeptidoField(prot) {
 
 function renderProveedor(el) {
   const compras=getCompras(), db=getDB();
-  let totalCosto=0, totalPagado=0, totalCortesiaSup=0, totalCortesiaCli=0;
-  compras.forEach(c => { if(c.cortesia_suplidor){totalCortesiaSup++;return;} totalCosto+=c.costo_total||0; totalPagado+=(c.pagos||[]).reduce((s,p)=>s+p.monto,0); });
+  let totalCosto=0, totalPagado=0, totalCortesiaSupMonto=0, totalCortesiaSup=0, totalCortesiaCli=0;
+  compras.forEach(c => {
+    if(c.cortesia_suplidor){totalCortesiaSup++;return;}
+    totalCosto+=c.costo_total||0;
+    (c.pagos||[]).forEach(p => { if(p.tipo==='cortesia_suplidor') totalCortesiaSupMonto+=(p.monto||0); else totalPagado+=(p.monto||0); });
+  });
   compras.forEach(c => totalCortesiaCli+=(c.cortesias_clientes||[]).length);
-  const totalPendiente = totalCosto - totalPagado;
+  const totalPendiente = totalCosto - totalPagado - totalCortesiaSupMonto;
   el.innerHTML = `
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px;gap:10px">
       <button class="btn btn-primary" onclick="modalNuevaCompra()">➕ Registrar Frasco</button>
     </div>
     <div class="prv-grid">
       <div class="prv-card" style="border-top-color:var(--primary)"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray-500)">💊 Total Invertido</div><div class="fin-amount" style="color:var(--primary)">$${totalCosto.toLocaleString('es-AR')}</div><div style="font-size:12px;color:var(--gray-400)">${compras.filter(c=>!c.cortesia_suplidor).length} frascos</div></div>
-      <div class="prv-card" style="border-top-color:var(--success)"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray-500)">✅ Total Pagado</div><div class="fin-amount" style="color:var(--success)">$${totalPagado.toLocaleString('es-AR')}</div><div style="font-size:12px;color:var(--gray-400)">Al suplidor</div></div>
+      <div class="prv-card" style="border-top-color:var(--success)"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray-500)">✅ Total Pagado</div><div class="fin-amount" style="color:var(--success)">$${totalPagado.toLocaleString('es-AR')}</div><div style="font-size:12px;color:var(--gray-400)">Efectivo/transf. al suplidor</div></div>
       <div class="prv-card" style="border-top-color:${totalPendiente>0?'var(--danger)':'var(--gray-200)'}"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray-500)">⏳ Saldo Pendiente</div><div class="fin-amount" style="color:${totalPendiente>0?'var(--danger)':'var(--gray-300)'}">$${totalPendiente.toLocaleString('es-AR')}</div><div style="font-size:12px;color:var(--gray-400)">Deuda al suplidor</div></div>
     </div>
     <div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
-      <span class="cortesia-tag">🎁 ${totalCortesiaSup} cortesía${totalCortesiaSup!==1?'s':''} del suplidor</span>
+      <span class="cortesia-tag">🎁 ${totalCortesiaSup} cortesía${totalCortesiaSup!==1?'s':''} del suplidor${totalCortesiaSupMonto>0?` · $${totalCortesiaSupMonto.toLocaleString('es-AR')} cubiertos`:''}</span>
       <span class="cortesia-tag" style="background:var(--warning-light);color:#92400e">🤝 ${totalCortesiaCli} cortesía${totalCortesiaCli!==1?'s':''} a clientes</span>
     </div>
     <div class="card" style="margin-bottom:20px">
@@ -3080,6 +3174,7 @@ function compraEstado(c) {
 function renderCompraCard(c, db, idx) {
   const est=compraEstado(c), pag=(c.pagos||[]).reduce((s,p)=>s+p.monto,0), pend=c.cortesia_suplidor?0:(c.costo_total||0)-pag;
   const mgCortSup=parseFloat(c.mg_cortesia_suplidor)||0;
+  const mgFam=parseFloat(c.mg_uso_personal)||0;
   const cortCliCount=(c.cortesias_clientes||[]).length, mgDesc=parseFloat(c.mg_descartado)||0;
   const vaciado=mgDesc>0&&c.mg>0&&mgDesc>=c.mg, ajustado=mgDesc>0&&!vaciado;
   return `<div class="compra-card">
@@ -3093,13 +3188,14 @@ function renderCompraCard(c, db, idx) {
           ${ajustado?'<span class="badge" style="background:var(--accent-light);color:#5b21b6;font-size:11px">✏️ Ajustado · -'+mgDesc+' mg</span>':''}
           ${!c.cortesia_suplidor?`<span style="font-size:12px;color:var(--gray-500)">· $${(c.costo_total||0).toLocaleString('es-AR')}${mgCortSup>0?` (${c.mg-mgCortSup}mg pagados · ${mgCortSup}mg gratis)`:''}</span>`:''}
           ${cortCliCount>0?`<span class="cortesia-tag" style="background:var(--warning-light);color:#92400e;font-size:11px">🤝 ${cortCliCount} cortesía${cortCliCount>1?'s':''}</span>`:''}
+          ${mgFam>0?`<span class="badge" style="background:#eef2ff;color:#3730a3;font-size:11px">🏠 ${mgFam}mg familiar · ${(c.mg-mgFam)}mg facturados</span>`:''}
         </div>
         <div style="font-size:12px;color:var(--gray-400)">📅 ${c.fecha_adquisicion||'—'}${!c.cortesia_suplidor&&pag>0?` · ✅ Pagado: $${pag.toLocaleString('es-AR')}`:''}${!c.cortesia_suplidor&&pend>0?` · ⏳ Pend: $${pend.toLocaleString('es-AR')}`:''}</div>
         ${c.notas?`<div style="font-size:12px;color:var(--gray-400);margin-top:3px">📝 ${esc(c.notas)}</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-          ${!c.cortesia_suplidor?`<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();modalPagoCompra('${c.id}')">💵 Abonar</button>`:''}
+          ${!c.cortesia_suplidor&&pend>0?`<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();modalPagoCompra('${c.id}')">💵 Abonar</button>`:''}
           ${pend>0&&!c.cortesia_suplidor?`<button class="btn btn-outline btn-sm" style="color:#92400e;border-color:#fcd34d;background:#fffbeb" onclick="event.stopPropagation();modalCortSupDeuda('${c.id}',${pend})">🎁 Cort. sup.</button>`:''}
           <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();modalEditarCompra('${c.id}')">✏️ Editar</button>
           <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();modalCortesiaCliente('${c.id}')">🤝 Cortesía</button>
@@ -3130,8 +3226,17 @@ function modalNuevaCompra() {
         <div class="form-group"><label>Cantidad (mg)</label><input type="number" step="0.5" id="nc-mg" placeholder="Ej: 10"></div>
         <div class="form-group"><label>Fecha de adquisición *</label><input type="date" id="nc-fecha" value="${today}"></div>
       </div>
-      <div class="form-group"><label>Fecha de vencimiento</label><input type="date" id="nc-vencimiento"></div>
-      <div class="form-group" id="nc-costo-group"><label>Costo total ($)</label><input type="number" step="0.01" id="nc-costo" placeholder="Ej: 5000"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Cantidad de frascos</label><input type="number" step="1" min="1" id="nc-cantidad" value="1" placeholder="1"><div style="font-size:11.5px;color:var(--gray-400);margin-top:4px">Ej: 2 frascos iguales → crea 2 entradas editables</div></div>
+        <div class="form-group"><label>Fecha de vencimiento</label><input type="date" id="nc-vencimiento"></div>
+      </div>
+      <div class="form-group" id="nc-costo-group"><label>Costo total ($)</label><input type="number" step="0.01" id="nc-costo" placeholder="Ej: 5000"><div style="font-size:11.5px;color:var(--gray-400);margin-top:4px">Por frasco. Poné solo lo que realmente se paga.</div></div>
+      <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="nc-uso-familiar-chk" onchange="toggleNcFamiliar()"><span>🏠 Parte del frasco es de uso personal/familiar (no se paga)</span></label></div>
+      <div id="nc-familiar-detail" style="display:none;background:#eef2ff;border-radius:10px;padding:12px;margin-bottom:4px">
+        <div style="font-size:12px;color:#3730a3;font-weight:600;margin-bottom:8px">¿Cuántos mg son de uso personal/familiar?</div>
+        <div class="form-group" style="margin-bottom:0"><input type="number" step="0.5" min="0" id="nc-mg-familiar" placeholder="Ej: 15 — de un frasco de 60, pagás 45"></div>
+        <div style="font-size:11.5px;color:#3730a3;margin-top:6px">Esos mg no se cuentan como deuda y se descuentan del stock disponible.</div>
+      </div>
       <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="nc-cortesia-sup" onchange="toggleNcCortesia()"><span>🎁 Incluye cortesía del suplidor</span></label></div>
       <div id="nc-cortesia-detail" style="display:none;background:var(--warning-light);border-radius:10px;padding:12px;margin-bottom:4px">
         <div style="font-size:12px;color:#92400e;font-weight:600;margin-bottom:8px">¿Cuántos mg son cortesía del suplidor?</div>
@@ -3142,6 +3247,12 @@ function modalNuevaCompra() {
     </div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="guardarCompra()">💾 Guardar</button></div>
   </div>`);
+}
+
+function toggleNcFamiliar() {
+  const checked=document.getElementById('nc-uso-familiar-chk')?.checked;
+  const detail=document.getElementById('nc-familiar-detail');
+  if (detail) detail.style.display=checked?'block':'none';
 }
 
 function toggleNcCortesia() {
@@ -3168,10 +3279,18 @@ function guardarCompra() {
   const cortesiaTotal=cortesiaChecked&&(mgCortesiaSup===0||mgCortesiaSup>=mgTotal);
   const cortesiaParcial=cortesiaChecked&&mgCortesiaSup>0&&mgCortesiaSup<mgTotal;
   const costo=cortesiaTotal?0:(parseFloat(document.getElementById('nc-costo').value)||0);
+  const usoFamChecked=document.getElementById('nc-uso-familiar-chk')?.checked;
+  const mgFamiliar=usoFamChecked?Math.min(mgTotal,(parseFloat(document.getElementById('nc-mg-familiar').value)||0)):0;
+  const cantidad=Math.max(1, parseInt(document.getElementById('nc-cantidad').value)||1);
   const compras=getCompras();
   const vencimiento = document.getElementById('nc-vencimiento').value || '';
-  compras.unshift({ id:newId(), peptido, mg:mgTotal, fecha_adquisicion:fecha, fecha_vencimiento:vencimiento, costo_total:costo, cortesia_suplidor:cortesiaTotal, mg_cortesia_suplidor:cortesiaParcial?mgCortesiaSup:0, notas:document.getElementById('nc-notas').value.trim(), pagos:[], cortesias_clientes:[] });
-  saveCompras(compras); closeModal(); renderProveedor(document.getElementById('content'));
+  const notas=document.getElementById('nc-notas').value.trim();
+  for (let i=0;i<cantidad;i++) {
+    compras.unshift({ id:newId(), peptido, mg:mgTotal, fecha_adquisicion:fecha, fecha_vencimiento:vencimiento, costo_total:costo, cortesia_suplidor:cortesiaTotal, mg_cortesia_suplidor:cortesiaParcial?mgCortesiaSup:0, mg_uso_personal:mgFamiliar, notas, pagos:[], cortesias_clientes:[] });
+  }
+  saveCompras(compras); closeModal();
+  showToast(cantidad>1?`${cantidad} frascos registrados ✓`:'Frasco registrado ✓','success');
+  renderProveedor(document.getElementById('content'));
 }
 
 function modalEditarCompra(compraId) {
@@ -3186,6 +3305,9 @@ function modalEditarCompra(compraId) {
       </div>
       <div class="form-group"><label>Costo total ($)</label><input type="number" step="0.01" id="ec-costo" value="${c.costo_total||0}">
         <div style="font-size:11.5px;color:var(--gray-400);margin-top:4px">Si el suplidor cubrió parte: poné acá el monto que realmente debés pagar</div>
+      </div>
+      <div class="form-group"><label>🏠 Mg de uso personal/familiar (no se pagan)</label><input type="number" step="0.5" min="0" id="ec-familiar" value="${c.mg_uso_personal||''}" placeholder="Ej: 15">
+        <div style="font-size:11.5px;color:var(--gray-400);margin-top:4px">No cuentan como deuda y se descuentan del stock disponible</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group"><label>Fecha adquisición</label><input type="date" id="ec-fecha" value="${c.fecha_adquisicion||''}"></div>
@@ -3203,6 +3325,7 @@ function guardarEditarCompra(compraId) {
   c.peptido=peptido;
   c.mg=parseFloat(document.getElementById('ec-mg').value)||c.mg;
   c.costo_total=parseFloat(document.getElementById('ec-costo').value)||0;
+  c.mg_uso_personal=Math.min(c.mg, parseFloat(document.getElementById('ec-familiar').value)||0);
   c.fecha_adquisicion=document.getElementById('ec-fecha').value||c.fecha_adquisicion;
   c.fecha_vencimiento=document.getElementById('ec-venc').value||'';
   c.notas=document.getElementById('ec-notas').value.trim();
