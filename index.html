@@ -1449,8 +1449,8 @@ function renderPerfil(el, id) {
           ${d.telefono ? `<span>${esc(d.telefono)}</span>` : ''}
           ${d.email    ? `<span>${esc(d.email)}</span>` : ''}
           ${d.ciudad   ? `<span>${esc(d.ciudad)}</span>` : ''}
-          ${d.peso     ? `<span>${esc(d.peso)} kg</span>` : ''}
-          ${d.altura   ? `<span>${esc(d.altura)} cm</span>` : ''}
+          ${d.peso     ? `<span>${esc(d.peso)} lbs</span>` : ''}
+          ${d.altura   ? `<span>${totalInToFtIn(d.altura)}</span>` : ''}
         </div>
       </div>
     </div>
@@ -1498,8 +1498,8 @@ function renderTabDatos(p) {
     <div class="card">
       <div class="card-title">Datos Físicos</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
-        ${field('Peso',d.peso ? d.peso+' kg' : '')}
-        ${field('Altura',d.altura ? d.altura+' cm' : '')}
+        ${field('Peso',d.peso ? d.peso+' lbs' : '')}
+        ${field('Altura',d.altura ? totalInToFtIn(d.altura) : '')}
         <div>
           <div style="font-size:10.5px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">IMC</div>
           ${imc ? `<div style="font-size:15px;font-weight:800;color:${imcCat.c}">${imc} <span style="font-size:11px;font-weight:600">${imcCat.l}</span></div>` : '<span style="color:var(--gray-300)">—</span>'}
@@ -1643,14 +1643,14 @@ function buildImcGauge(imc, peso, alturaNum, sexo) {
   const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb',bg:'#dbeafe'}:imc<25?{l:'Normal ✓',c:'#059669',bg:'#d1fae5'}:imc<30?{l:'Sobrepeso',c:'#d97706',bg:'#fef3c7'}:imc<35?{l:'Obesidad I',c:'#dc2626',bg:'#fee2e2'}:{l:'Obesidad II+',c:'#991b1b',bg:'#fecaca'};
   const cssRot = +((clamp(imc) - minI) / (maxI - minI) * 180 - 90).toFixed(1);
   const uid = 'n'+(Date.now()%99999);
-  // Ideal weight (Hamwi)
+  // Ideal weight (Hamwi — imperial: lbs and total inches)
   let idealHtml = '';
   if (alturaNum) {
-    const inchTotal = alturaNum / 2.54, over = Math.max(0, inchTotal - 60);
-    const ideal = parseFloat((sexo==='Masculino' ? 48+2.7*over : 45.5+2.2*over).toFixed(1));
+    const over = Math.max(0, alturaNum - 60);
+    const ideal = parseFloat((sexo==='Masculino' ? 106+6*over : 100+5*over).toFixed(1));
     const diff = peso ? +(parseFloat(peso)-ideal).toFixed(1) : null;
-    const diffStr = diff!=null ? (diff>0?`+${diff} kg por encima`:`${Math.abs(diff)} kg por debajo`) : '';
-    idealHtml = `<div style="font-size:12px;color:var(--on-surface-variant);margin-top:6px">Peso ideal estimado: <strong style="color:var(--on-surface)">${ideal} kg</strong>${diff!=null?' · <span style="color:'+cat.c+'">'+diffStr+'</span>':''}</div>`;
+    const diffStr = diff!=null ? (diff>0?`+${diff} lbs por encima`:`${Math.abs(diff)} lbs por debajo`) : '';
+    idealHtml = `<div style="font-size:12px;color:var(--on-surface-variant);margin-top:6px">Peso ideal estimado: <strong style="color:var(--on-surface)">${ideal} lbs</strong>${diff!=null?' · <span style="color:'+cat.c+'">'+diffStr+'</span>':''}</div>`;
   }
   return `<div style="text-align:center">
     <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:100%;height:auto;overflow:visible">${arcs}${ticks}
@@ -1687,7 +1687,7 @@ function buildPesoChart(records) {
   const fmt = f => { const parts=String(f).split('-'); return parts.length===3?parts[2]+'/'+parts[1]:f; };
   const xLabels = `<text x="${coords[0][0]}" y="${H-10}" font-size="9" fill="#94a3b8" text-anchor="start">${fmt(pts[0].fecha)}</text><text x="${coords[coords.length-1][0]}" y="${H-10}" font-size="9" fill="#94a3b8" text-anchor="end">${fmt(pts[pts.length-1].fecha)}</text>`;
   const delta = +(pts[pts.length-1].peso - pts[0].peso).toFixed(1);
-  const deltaStr = delta===0?'Sin cambio':(delta>0?`+${delta} kg`:`${delta} kg`);
+  const deltaStr = delta===0?'Sin cambio':(delta>0?`+${delta} lbs`:`${delta} lbs`);
   const deltaCol = delta>0?'#d97706':delta<0?'#059669':'#64748b';
   return `<div class="imc-gauge-card" style="text-align:left">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -1701,6 +1701,85 @@ function buildPesoChart(records) {
       ${dots}${xLabels}
     </svg>
   </div>`;
+}
+
+function buildCompChart(records, field, color, title, unit) {
+  const pts = (records||[])
+    .filter(r => r[field] && parseFloat(r[field]) > 0 && r.fecha)
+    .map(r => ({ fecha: r.fecha, val: parseFloat(r[field]) }))
+    .sort((a,b) => a.fecha.localeCompare(b.fecha));
+  if (pts.length < 2) return '';
+  const W=320, H=130, padX=34, padTop=18, padBot=28;
+  const vals = pts.map(p=>p.val);
+  let min=Math.min(...vals), max=Math.max(...vals);
+  if (min===max) { min-=1; max+=1; } else { const m=(max-min)*0.15; min-=m; max+=m; }
+  const x = i => padX + (pts.length===1?0:i/(pts.length-1))*(W-padX*2);
+  const y = v => padTop + (1-(v-min)/(max-min))*(H-padTop-padBot);
+  const coords = pts.map((p,i)=>[+x(i).toFixed(1),+y(p.val).toFixed(1)]);
+  const linePts = coords.map(c=>c.join(',')).join(' ');
+  const areaPts = `${coords[0][0]},${H-padBot} ${linePts} ${coords[coords.length-1][0]},${H-padBot}`;
+  const dots = coords.map((c,i)=>`<circle cx="${c[0]}" cy="${c[1]}" r="3.5" fill="${color}"/>${(i===0||i===pts.length-1)?`<text x="${c[0]}" y="${c[1]-9}" font-size="10" font-weight="700" fill="${color}" text-anchor="middle">${pts[i].val}${unit}</text>`:''}`).join('');
+  const fmt = f => { const parts=String(f).split('-'); return parts.length===3?parts[2]+'/'+parts[1]:f; };
+  const xLabels = `<text x="${coords[0][0]}" y="${H-8}" font-size="9" fill="#94a3b8" text-anchor="start">${fmt(pts[0].fecha)}</text><text x="${coords[coords.length-1][0]}" y="${H-8}" font-size="9" fill="#94a3b8" text-anchor="end">${fmt(pts[pts.length-1].fecha)}</text>`;
+  const delta = +(pts[pts.length-1].val - pts[0].val).toFixed(1);
+  const deltaStr = delta===0?'Sin cambio':(delta>0?`+${delta}${unit}`:`${delta}${unit}`);
+  const deltaCol = field==='grasa_pct' ? (delta>0?'#dc2626':'#059669') : (delta>0?'#059669':'#dc2626');
+  return `<div class="imc-gauge-card" style="text-align:left;margin-top:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant)">${title}</div>
+      <span style="font-size:12px;font-weight:700;color:${deltaCol}">${deltaStr}</span>
+    </div>
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+      <polyline points="${areaPts}" fill="${color}22" stroke="none"/>
+      <polyline points="${linePts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}${xLabels}
+    </svg>
+  </div>`;
+}
+
+// ─── Peso Semanal (registro rápido) ───
+function openModalPesoSemanal(pacienteId) {
+  _currentResultadoPacienteId = pacienteId;
+  const p = getPaciente(pacienteId);
+  openModal(`<div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>⚖️ Registro Semanal de Peso</h3>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Fecha</label><input type="date" id="sw-fecha" value="${new Date().toISOString().split('T')[0]}"></div>
+      <div class="form-group"><label>Peso (lbs)</label><input type="number" step="0.1" id="sw-peso" placeholder="Ej: 154.2" oninput="calcImcModal()"></div>
+      <div class="form-group"><label>% Grasa corporal <span style="font-size:11px;color:var(--gray-400)">(opcional)</span></label><input type="number" step="0.1" id="sw-grasa" placeholder="Ej: 28.5"></div>
+      <div class="form-group"><label>% Masa muscular <span style="font-size:11px;color:var(--gray-400)">(opcional)</span></label><input type="number" step="0.1" id="sw-musculo" placeholder="Ej: 34.2"></div>
+      <div id="imc-preview" style="min-height:20px;margin-top:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPesoSemanal('${pacienteId}')">💾 Guardar</button>
+    </div>
+  </div>`);
+}
+
+function guardarPesoSemanal(pacienteId) {
+  const fecha = document.getElementById('sw-fecha')?.value;
+  const peso  = document.getElementById('sw-peso')?.value || '';
+  if (!fecha || !peso) { showToast('Fecha y peso son obligatorios', 'error'); return; }
+  const p = getPaciente(pacienteId);
+  const altIn = parseFloat(p.datos_personales.altura || 0);
+  const imc = String(calcImcImperial(peso, altIn) || '');
+  const grasa  = document.getElementById('sw-grasa')?.value || '';
+  const musculo= document.getElementById('sw-musculo')?.value || '';
+  if (!p.resultados) p.resultados = [];
+  let r = p.resultados.find(x => x.fecha === fecha);
+  if (r) {
+    r.peso=peso; r.imc=imc; if (grasa) r.grasa_pct=grasa; if (musculo) r.musculo_pct=musculo;
+  } else {
+    p.resultados.push({ fecha, peso, altura:p.datos_personales.altura||'', imc, grasa_pct:grasa, musculo_pct:musculo, tension:'', glucemia:'', laboratorios:'', observaciones:'' });
+  }
+  p.datos_personales.peso = peso;
+  savePaciente(p); closeModal();
+  showToast('⚖️ Peso registrado', 'success');
+  profileTab = 'resultados'; navigate('perfil', pacienteId);
 }
 
 function initImcGauges() {
@@ -1722,34 +1801,37 @@ function renderTabResultados(p) {
   // Usar el registro más reciente para el gauge
   const last = sorted[0];
   const pesoVal = parseFloat(last?.peso || d.peso || 0);
-  const altVal  = parseFloat(last?.altura || d.altura || 0);
-  const imcVal  = (pesoVal && altVal) ? parseFloat((pesoVal / Math.pow(altVal/100, 2)).toFixed(1)) : null;
+  const altVal  = parseFloat(last?.altura || d.altura || 0); // stored as total inches
+  const imcVal  = calcImcImperial(pesoVal, altVal);
 
   const gaugeHtml = imcVal ? `
     <div class="imc-gauge-card">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant);margin-bottom:10px">📊 Estado Actual · ${pesoVal} kg · ${altVal} cm</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--on-surface-variant);margin-bottom:10px">📊 Estado Actual · ${pesoVal} lbs · ${totalInToFtIn(altVal)}</div>
       <div class="imc-gauge-row">
         ${buildImcGauge(imcVal, pesoVal, altVal, d.sexo)}
       </div>
     </div>`
     : (pesoVal ? `
     <div class="imc-gauge-card" style="text-align:center;color:var(--on-surface-variant);font-size:13px">
-      📊 Peso actual: <strong style="color:var(--on-surface)">${pesoVal} kg</strong><br>
-      <span style="font-size:12px">Cargá la <strong>altura</strong> del paciente para ver el gráfico de IMC.</span>
+      📊 Peso actual: <strong style="color:var(--on-surface)">${pesoVal} lbs</strong><br>
+      <span style="font-size:12px">Cargá la <strong>altura</strong> del paciente en su perfil para ver el gráfico de IMC.</span>
     </div>` : '');
 
   const pesoChartHtml = buildPesoChart(res);
 
   return `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-      <button class="btn btn-primary" onclick="openModalResultado('${p.id}',null)">➕ Nuevo Registro</button>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px">
+      <button class="btn btn-outline" onclick="openModalPesoSemanal('${p.id}')">⚖️ Peso Semanal</button>
+      <button class="btn btn-primary" onclick="openModalResultado('${p.id}',null)">➕ Registro Completo</button>
     </div>
     ${gaugeHtml}
     ${pesoChartHtml}
-    ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Registrá el peso, laboratorios y observaciones</p></div>` : ''}
+    ${buildCompChart(res,'grasa_pct','#f97316','📊 Evolución % Grasa','%')}
+    ${buildCompChart(res,'musculo_pct','#10b981','💪 Evolución % Músculo','%')}
+    ${!res.length ? `<div class="empty"><div class="icon">📈</div><h3>Sin registros de evolución</h3><p>Usá "⚖️ Peso Semanal" para el seguimiento rápido o "➕ Registro Completo" para datos clínicos</p></div>` : ''}
     ${sorted.map(r => {
       const origI = res.indexOf(r);
-      const rImc = r.imc || (r.peso && r.altura ? parseFloat((parseFloat(r.peso)/Math.pow(parseFloat(r.altura)/100,2)).toFixed(1)) : null);
+      const rImc = r.imc || calcImcImperial(r.peso, r.altura || d.altura);
       return `<div class="resultado-item">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div style="font-weight:700;color:var(--primary)">📅 ${formatDate(r.fecha)}</div>
@@ -1759,11 +1841,12 @@ function renderTabResultados(p) {
           </div>
         </div>
         <div class="resultado-grid">
-          ${r.peso     ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} kg</div></div>` : ''}
-          ${r.altura   ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Altura</div><div style="font-weight:800;font-size:16px">${r.altura} cm</div></div>` : ''}
-          ${rImc       ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}</div></div>` : ''}
-          ${r.tension  ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Tensión</div><div style="font-weight:600">${r.tension}</div></div>` : ''}
-          ${r.glucemia ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Glucemia</div><div style="font-weight:600">${r.glucemia}</div></div>` : ''}
+          ${r.peso        ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Peso</div><div style="font-weight:800;font-size:16px">${r.peso} lbs</div></div>` : ''}
+          ${rImc          ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">IMC</div><div style="font-weight:800;font-size:16px">${rImc}</div></div>` : ''}
+          ${r.grasa_pct   ? `<div><div style="font-size:10px;font-weight:700;color:#f97316;text-transform:uppercase">Grasa</div><div style="font-weight:800;font-size:16px;color:#f97316">${r.grasa_pct}%</div></div>` : ''}
+          ${r.musculo_pct ? `<div><div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase">Músculo</div><div style="font-weight:800;font-size:16px;color:#10b981">${r.musculo_pct}%</div></div>` : ''}
+          ${r.tension     ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Tensión</div><div style="font-weight:600">${r.tension}</div></div>` : ''}
+          ${r.glucemia    ? `<div><div style="font-size:10px;font-weight:700;color:var(--gray-500);text-transform:uppercase">Glucemia</div><div style="font-weight:600">${r.glucemia}</div></div>` : ''}
         </div>
         ${r.laboratorios  ? `<div style="margin-top:8px;font-size:12.5px"><strong>🧪 Laboratorios:</strong> ${esc(r.laboratorios)}</div>` : ''}
         ${r.observaciones ? `<div style="margin-top:6px;font-size:12.5px;color:var(--gray-500)">${esc(r.observaciones)}</div>` : ''}
@@ -1813,12 +1896,15 @@ function renderFormPaciente(el, id) {
         <div class="form-section-body">
           <div class="form-grid">
             <div class="form-group">
-              <label>Peso actual (kg)</label>
-              <input type="number" step="0.1" name="peso" id="fp-peso" value="${esc(d.peso||'')}" placeholder="Ej: 65.5" oninput="calcImcForm()">
+              <label>Peso actual (lbs)</label>
+              <input type="number" step="0.1" name="peso" id="fp-peso" value="${esc(d.peso||'')}" placeholder="Ej: 154" oninput="calcImcForm()">
             </div>
             <div class="form-group">
-              <label>Altura (cm)</label>
-              <input type="number" name="altura" id="fp-altura" value="${esc(d.altura||'')}" placeholder="Ej: 165" oninput="calcImcForm()">
+              <label>Altura (pie + pulgadas)</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <input type="number" name="altura_ft" id="fp-altura-ft" value="${esc(String(splitInches(d.altura||'').ft||''))}" placeholder="Pies" min="0" max="9" oninput="calcImcForm()">
+                <input type="number" name="altura_in" id="fp-altura-in" value="${esc(String(splitInches(d.altura||'').inch||''))}" placeholder="Pulgadas" min="0" max="11" step="0.5" oninput="calcImcForm()">
+              </div>
             </div>
             <div class="form-group">
               <label>IMC <span style="font-size:10px;color:var(--gray-400)">(calculado automático)</span></label>
@@ -1885,11 +1971,13 @@ function guardarPaciente(e, id) {
   const g = n => f.querySelector(`[name="${n}"]`)?.value || '';
   let p = id ? getPaciente(id) : null;
   if (!p) p = { id: newId(), datos_personales:{}, protocolo_peptidos:[], historial_consultas:[], resultados:[], comentarios:[] };
+  const altFt = parseFloat(g('altura_ft')||0), altIn = parseFloat(g('altura_in')||0);
+  const totalInches = altFt > 0 || altIn > 0 ? String(+(altFt*12 + altIn).toFixed(1)) : '';
   p.datos_personales = {
     nombre:g('nombre'), apellido:g('apellido'), dni:g('dni'),
     fecha_nacimiento:g('fecha_nacimiento'), sexo:g('sexo'),
     ocupacion:g('ocupacion'), telefono:g('telefono'), email:g('email'),
-    ciudad:g('ciudad'), peso:g('peso'), altura:g('altura'),
+    ciudad:g('ciudad'), peso:g('peso'), altura:totalInches,
     objetivo_tratamiento:g('objetivo_tratamiento'),
     alergias:g('alergias'), grupo_sanguineo:g('grupo_sanguineo'),
     medicacion_actual:g('medicacion_actual'),
@@ -2066,7 +2154,9 @@ async function eliminarPeptido(pacienteId, idx) {
 }
 
 // — Modal Consulta —
+let _currentConsultaPacienteId = null;
 function openModalConsulta(pacienteId, idx) {
+  _currentConsultaPacienteId = pacienteId;
   const p = getPaciente(pacienteId);
   const c = idx !== null ? p.historial_consultas[idx] : null;
   const isCortesia = c?.cortesia || false;
@@ -2091,8 +2181,9 @@ function openModalConsulta(pacienteId, idx) {
       <hr style="margin:14px 0;border:none;border-top:1px solid var(--gray-200)">
       <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--gray-700)">📏 Medidas del paciente <span style="font-size:11px;font-weight:500;color:var(--gray-400)">(opcional — se guarda en Evolución)</span></div>
       <div class="form-grid">
-        <div class="form-group"><label>Peso (kg)</label><input type="number" step="0.1" id="c-peso" value="${esc(String(cMed?.peso||''))}" placeholder="Ej: 65.5" oninput="calcImcConsulta()"></div>
-        <div class="form-group"><label>Altura (cm)</label><input type="number" step="1" id="c-altura" value="${esc(String(cMed?.altura||p.datos_personales.altura||''))}" placeholder="Ej: 165" oninput="calcImcConsulta()"></div>
+        <div class="form-group"><label>Peso (lbs)</label><input type="number" step="0.1" id="c-peso" value="${esc(String(cMed?.peso||''))}" placeholder="Ej: 154" oninput="calcImcConsulta()"></div>
+        <div class="form-group"><label>% Grasa corporal</label><input type="number" step="0.1" id="c-grasa" value="${esc(String(cMed?.grasa_pct||''))}" placeholder="Ej: 28.5"></div>
+        <div class="form-group"><label>% Masa muscular</label><input type="number" step="0.1" id="c-musculo" value="${esc(String(cMed?.musculo_pct||''))}" placeholder="Ej: 34.2"></div>
         <div class="form-group"><label>Tensión arterial</label><input type="text" id="c-tension" value="${esc(cMed?.tension||'')}" placeholder="Ej: 120/80"></div>
         <div class="form-group"><label>Glucemia (mg/dL)</label><input type="text" id="c-glucemia" value="${esc(cMed?.glucemia||'')}" placeholder="Ej: 95"></div>
       </div>
@@ -2154,12 +2245,14 @@ function openModalConsulta(pacienteId, idx) {
 
 function calcImcConsulta() {
   const peso = parseFloat(document.getElementById('c-peso')?.value);
-  const alt  = parseFloat(document.getElementById('c-altura')?.value);
   const prev = document.getElementById('c-imc-preview');
   if (!prev) return;
-  if (peso && alt && alt > 0) {
-    const imc = +(peso / Math.pow(alt/100, 2)).toFixed(1);
-    const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
+  // Use patient's stored height (total inches) for IMC
+  const p = getPaciente(_currentConsultaPacienteId);
+  const altIn = parseFloat(p?.datos_personales?.altura || 0);
+  const imc = calcImcImperial(peso, altIn);
+  if (imc) {
+    const cat = imcCatStyle(imc);
     prev.innerHTML = `<span style="font-weight:700;font-size:14px;color:${cat.c}">IMC ${imc}</span> <span style="font-size:12px;color:${cat.c}">${cat.l}</span>`;
   } else { prev.innerHTML = ''; }
 }
@@ -2199,21 +2292,26 @@ function guardarConsulta(pacienteId, idx) {
   if (idx !== null) p.historial_consultas[idx] = data; else p.historial_consultas.push(data);
 
   // Medidas → se guardan en Evolución (upsert por fecha) sin tener que ir a esa pestaña
-  const mPeso = document.getElementById('c-peso')?.value || '';
-  const mAlt  = document.getElementById('c-altura')?.value || '';
-  const mTen  = document.getElementById('c-tension')?.value || '';
-  const mGlu  = document.getElementById('c-glucemia')?.value || '';
-  if (mPeso || mAlt || mTen || mGlu) {
-    if (mAlt)  p.datos_personales.altura = mAlt;
-    if (mPeso) p.datos_personales.peso   = mPeso;
-    const imc = (mPeso && mAlt && parseFloat(mAlt)>0) ? +(parseFloat(mPeso)/Math.pow(parseFloat(mAlt)/100,2)).toFixed(1) : '';
+  const mPeso   = document.getElementById('c-peso')?.value || '';
+  const mTen    = document.getElementById('c-tension')?.value || '';
+  const mGlu    = document.getElementById('c-glucemia')?.value || '';
+  const mGrasa  = document.getElementById('c-grasa')?.value || '';
+  const mMusc   = document.getElementById('c-musculo')?.value || '';
+  if (mPeso || mTen || mGlu || mGrasa || mMusc) {
+    if (mPeso) p.datos_personales.peso = mPeso;
+    const altIn = parseFloat(p.datos_personales.altura || 0);
+    const imc = mPeso && altIn > 0 ? String(calcImcImperial(mPeso, altIn) || '') : '';
     if (!p.resultados) p.resultados = [];
     let r = p.resultados.find(x => x.fecha === fecha);
     if (r) {
-      if (mPeso) r.peso=mPeso; if (mAlt) r.altura=mAlt; if (imc) r.imc=imc;
-      if (mTen) r.tension=mTen; if (mGlu) r.glucemia=mGlu;
+      if (mPeso)  r.peso       = mPeso;
+      if (imc)    r.imc        = imc;
+      if (mTen)   r.tension    = mTen;
+      if (mGlu)   r.glucemia   = mGlu;
+      if (mGrasa) r.grasa_pct  = mGrasa;
+      if (mMusc)  r.musculo_pct= mMusc;
     } else {
-      p.resultados.push({ fecha, peso:mPeso, altura:mAlt, imc, tension:mTen, glucemia:mGlu, laboratorios:'', observaciones:'Registrado desde consulta' });
+      p.resultados.push({ fecha, peso:mPeso, altura:p.datos_personales.altura||'', imc, tension:mTen, glucemia:mGlu, grasa_pct:mGrasa, musculo_pct:mMusc, laboratorios:'', observaciones:'Registrado desde consulta' });
     }
   }
 
@@ -2233,12 +2331,12 @@ async function eliminarConsulta(pacienteId, idx) {
 
 // — Modal Resultado —
 function openModalResultado(pacienteId, idx) {
+  _currentResultadoPacienteId = pacienteId;
   const p = getPaciente(pacienteId);
   const r = idx !== null ? p.resultados[idx] : null;
   const d = p.datos_personales;
-  // Pre-fill altura from patient data or previous record
-  const alturaDefault = r?.altura || d.altura || '';
-  const pesoDefault   = r?.peso   || d.peso  || '';
+  const pesoDefault = r?.peso || d.peso || '';
+  const si = splitInches(d.altura || '');
   openModal(`<div class="modal">
     <div class="modal-header">
       <h3>📈 ${r ? 'Editar Registro' : 'Nuevo Registro de Evolución'}</h3>
@@ -2248,22 +2346,27 @@ function openModalResultado(pacienteId, idx) {
       <div class="form-grid">
         <div class="form-group"><label>Fecha *</label><input type="date" id="r-fecha" value="${r?.fecha||new Date().toISOString().split('T')[0]}"></div>
         <div class="form-group">
-          <label>Peso (kg)</label>
-          <input type="number" step="0.1" id="r-peso" value="${esc(String(r?.peso||pesoDefault))}" placeholder="Ej: 65.5" oninput="calcImcModal()">
+          <label>Peso (lbs)</label>
+          <input type="number" step="0.1" id="r-peso" value="${esc(String(r?.peso||pesoDefault))}" placeholder="Ej: 154" oninput="calcImcModal()">
         </div>
         <div class="form-group">
-          <label>Altura (cm)</label>
-          <input type="number" step="1" id="r-altura" value="${esc(String(alturaDefault))}" placeholder="Ej: 165" oninput="calcImcModal()">
-        </div>
-        <div class="form-group">
-          <label>IMC <span style="font-size:10px;color:var(--gray-400)">(calculado automático)</span></label>
+          <label>IMC <span style="font-size:10px;color:var(--gray-400)">(auto)</span></label>
           <input type="number" step="0.1" id="r-imc" value="${esc(String(r?.imc||''))}" placeholder="Auto" style="background:var(--surface-container-low)" readonly>
+        </div>
+        <div class="form-group">
+          <label>% Grasa corporal</label>
+          <input type="number" step="0.1" id="r-grasa" value="${esc(String(r?.grasa_pct||''))}" placeholder="Ej: 28.5">
+        </div>
+        <div class="form-group">
+          <label>% Masa muscular</label>
+          <input type="number" step="0.1" id="r-musculo" value="${esc(String(r?.musculo_pct||''))}" placeholder="Ej: 34.2">
         </div>
         <div class="form-group"><label>Tensión arterial</label><input type="text" id="r-tension" value="${esc(r?.tension||'')}" placeholder="Ej: 120/80"></div>
         <div class="form-group"><label>Glucemia (mg/dL)</label><input type="text" id="r-glucemia" value="${esc(r?.glucemia||'')}" placeholder="Ej: 95"></div>
       </div>
+      <div style="font-size:11.5px;color:var(--gray-400);margin:2px 0 8px">Altura del paciente: <strong>${totalInToFtIn(d.altura||'')}</strong> — para cambiarla, editá el perfil del paciente.</div>
       <!-- IMC preview -->
-      <div id="imc-preview" style="margin:8px 0 4px;min-height:24px"></div>
+      <div id="imc-preview" style="margin:4px 0 4px;min-height:22px"></div>
       <div class="form-group" style="margin-top:8px"><label>Resultados de laboratorio</label><textarea id="r-laboratorios" rows="2" placeholder="HbA1c, IGF-1, perfil lipídico, hemograma...">${esc(r?.laboratorios||'')}</textarea></div>
       <div class="form-group" style="margin-top:12px"><label>Observaciones / Evolución</label><textarea id="r-observaciones" rows="3" placeholder="Cómo responde el paciente, cambios subjetivos, efectos adversos...">${esc(r?.observaciones||'')}</textarea></div>
     </div>
@@ -2272,18 +2375,21 @@ function openModalResultado(pacienteId, idx) {
       <button class="btn btn-primary" onclick="guardarResultado('${pacienteId}',${idx})">💾 Guardar</button>
     </div>
   </div>`);
+  _currentResultadoPacienteId = pacienteId;
   setTimeout(calcImcModal, 60);
 }
 
 function calcImcForm() {
   const peso = parseFloat(document.getElementById('fp-peso')?.value);
-  const alt  = parseFloat(document.getElementById('fp-altura')?.value);
+  const ft   = parseFloat(document.getElementById('fp-altura-ft')?.value||0);
+  const inch = parseFloat(document.getElementById('fp-altura-in')?.value||0);
+  const totalIn = ft*12 + inch;
   const imcEl = document.getElementById('fp-imc');
   const prev  = document.getElementById('fp-imc-preview');
-  if (peso && alt && alt > 0 && imcEl) {
-    const imc = +(peso / Math.pow(alt/100, 2)).toFixed(1);
+  const imc = calcImcImperial(peso, totalIn);
+  if (imc && imcEl) {
     imcEl.value = imc;
-    const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
+    const cat = imcCatStyle(imc);
     if (prev) prev.innerHTML = `<span style="font-weight:700;color:${cat.c}">IMC ${imc}</span> <span style="color:${cat.c}">${cat.l}</span>`;
   } else if (imcEl) {
     imcEl.value = '';
@@ -2291,15 +2397,17 @@ function calcImcForm() {
   }
 }
 
+let _currentResultadoPacienteId = null;
 function calcImcModal() {
-  const peso = parseFloat(document.getElementById('r-peso')?.value);
-  const alt  = parseFloat(document.getElementById('r-altura')?.value);
+  const peso  = parseFloat(document.getElementById('r-peso')?.value);
   const imcEl = document.getElementById('r-imc');
   const prev  = document.getElementById('imc-preview');
-  if (peso && alt && alt > 0 && imcEl) {
-    const imc = +(peso / Math.pow(alt/100, 2)).toFixed(1);
+  const p = _currentResultadoPacienteId ? getPaciente(_currentResultadoPacienteId) : null;
+  const altIn = parseFloat(p?.datos_personales?.altura || 0);
+  const imc = calcImcImperial(peso, altIn);
+  if (imc && imcEl) {
     imcEl.value = imc;
-    const cat = imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
+    const cat = imcCatStyle(imc);
     if (prev) prev.innerHTML = `<span style="font-weight:700;font-size:15px;color:${cat.c}">${imc}</span> <span style="font-size:12px;color:${cat.c}">${cat.l}</span>`;
   } else if (imcEl) {
     imcEl.value = '';
@@ -2312,13 +2420,14 @@ function guardarResultado(pacienteId, idx) {
   if (!fecha) { showToast('Ingresá la fecha', 'error'); return; }
   const p = getPaciente(pacienteId);
   const peso = document.getElementById('r-peso').value;
-  const altura = document.getElementById('r-altura').value;
-  if (altura) p.datos_personales.altura = altura;
-  if (peso)   p.datos_personales.peso   = peso;
+  if (peso) p.datos_personales.peso = peso;
   const data = {
-    fecha, peso, altura, imc: document.getElementById('r-imc').value,
+    fecha, peso, altura: p.datos_personales.altura || '',
+    imc: document.getElementById('r-imc').value,
     tension: document.getElementById('r-tension').value,
     glucemia: document.getElementById('r-glucemia').value,
+    grasa_pct: document.getElementById('r-grasa')?.value || '',
+    musculo_pct: document.getElementById('r-musculo')?.value || '',
     laboratorios: document.getElementById('r-laboratorios').value,
     observaciones: document.getElementById('r-observaciones').value,
   };
@@ -2489,7 +2598,7 @@ function renderImportPreview(rows) {
             <option value="dni">DNI</option><option value="fecha_nacimiento">Fecha Nacimiento</option>
             <option value="sexo">Sexo</option><option value="telefono">Teléfono</option>
             <option value="email">Email</option><option value="ciudad">Ciudad</option>
-            <option value="peso">Peso (kg)</option><option value="altura">Altura (cm)</option>
+            <option value="peso">Peso (lbs)</option><option value="altura">Altura (total pulgadas)</option>
             <option value="antecedentes">Antecedentes</option>
           </optgroup>
           <optgroup label="Péptido">
@@ -2571,7 +2680,7 @@ function exportarExcel() {
       'Nombre':d.nombre||'', 'Apellido':d.apellido||'', 'DNI':d.dni||'',
       'Fecha Nac.':d.fecha_nacimiento||'', 'Sexo':d.sexo||'',
       'Teléfono':d.telefono||'', 'Email':d.email||'', 'Ciudad':d.ciudad||'',
-      'Peso (kg)':d.peso||'', 'Altura (cm)':d.altura||'',
+      'Peso (lbs)':d.peso||'', 'Altura (total pulgadas)':d.altura||'',
       'Péptidos Activos':prots.filter(x=>x.activo).map(x=>x.peptido).join(', '),
       'Dosis':prots.filter(x=>x.activo).map(x=>x.dosis).join(', '),
       'Frecuencia':prots.filter(x=>x.activo).map(x=>x.frecuencia).join(', '),
@@ -2599,6 +2708,26 @@ function formatDate(dateStr) {
   if (!dateStr) return '—';
   try { return new Date(dateStr+'T12:00:00').toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' }); }
   catch { return dateStr; }
+}
+// ─── Imperial unit helpers ───
+function lbsToKg(lb)  { return parseFloat(lb) * 0.453592; }
+function inToM(inches){ return parseFloat(inches) * 0.0254; }
+function totalInToFtIn(totalIn) {
+  const n = parseFloat(totalIn);
+  if (!n || isNaN(n) || n <= 0) return '—';
+  return `${Math.floor(n/12)}'${Math.round(n%12)}"`;
+}
+function calcImcImperial(lbs, totalInches) {
+  const l = parseFloat(lbs), h = parseFloat(totalInches);
+  if (!l || !h || h <= 0) return null;
+  return +(lbsToKg(l) / Math.pow(inToM(h), 2)).toFixed(1);
+}
+function splitInches(totalIn) {
+  const n = parseFloat(totalIn) || 0;
+  return { ft: Math.floor(n/12), inch: +(n % 12).toFixed(1) };
+}
+function imcCatStyle(imc) {
+  return imc<18.5?{l:'Bajo peso',c:'#2563eb'}:imc<25?{l:'Normal ✓',c:'#059669'}:imc<30?{l:'Sobrepeso',c:'#d97706'}:imc<35?{l:'Obesidad I',c:'#dc2626'}:{l:'Obesidad II+',c:'#991b1b'};
 }
 function calcEdad(fechaNac) {
   if (!fechaNac) return '—';
